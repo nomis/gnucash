@@ -517,6 +517,7 @@ sixtp_sax_end_handler (void* user_data, const xmlChar* name)
     current_frame = (sixtp_stack_frame*) pdata->stack->data;
     parent_frame = (sixtp_stack_frame*) pdata->stack->next->data;
 
+#if 0
     /* time to make sure we got the right closing tag.  Is this really
        necessary? */
     if (g_strcmp0 (current_frame->tag, (gchar*) name) != 0)
@@ -533,6 +534,7 @@ sixtp_sax_end_handler (void* user_data, const xmlChar* name)
             g_warning ("found matching start <%s> tag up one level", name);
         }
     }
+#endif
 
     /* tag's OK, proceed. */
     if (current_frame->parser->end_handler)
@@ -566,7 +568,7 @@ sixtp_sax_end_handler (void* user_data, const xmlChar* name)
     /* grab it before it goes away - we own the reference */
     end_tag = current_frame->tag;
 
-    g_debug ("Finished with end of <%s>", end_tag ? end_tag : "(null)");
+    //g_debug ("Finished with end of <%s>", end_tag ? end_tag : "(null)");
 
     /*sixtp_print_frame_stack(pdata->stack, stderr);*/
 
