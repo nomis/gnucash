@@ -156,21 +156,22 @@ GncInt128::cmp (const GncInt128& b) const noexcept
     auto flags = get_flags(m_hi);
     if (flags & (overflow | NaN))
         return -1;
-    if (b.isOverflow () || b.isNan ())
+    auto bflags = get_flags(b.m_hi);
+    if (bflags & (overflow | NaN))
         return 1;
     auto hi = get_num(m_hi);
     auto bhi = get_num(b.m_hi);
-    if (isZero() && b.isZero()) return 0;
+    if (hi == 0 && m_lo == 0 && bhi == 0 && b.m_lo == 0) return 0;
     if (flags & neg)
     {
-        if (!b.isNeg()) return -1;
+        if (!(bflags & neg)) return -1;
         if (hi > bhi) return -1;
         if (hi < bhi) return 1;
         if (m_lo > b.m_lo) return -1;
         if (m_lo < b.m_lo) return 1;
         return 0;
     }
-    if (b.isNeg()) return 1;
+    if (bflags & neg) return 1;
     if (hi < bhi) return -1;
     if (hi > bhi) return 1;
     if (m_lo < b.m_lo) return -1;
@@ -184,18 +185,21 @@ GncInt128::cmp (const GncInt128& b) const noexcept
 GncInt128
 GncInt128::gcd(GncInt128 b) const noexcept
 {
-    if (b.isZero())
-        return *this;
-    if (isZero())
-        return b;
+    auto flags = get_flags(m_hi);
+    auto bflags = get_flags(b.m_hi);
 
-    if (b.isOverflow() || b.isNan())
+    if (bflags & (overflow | NaN))
         return b;
-    if (isOverflow() || isNan())
+    if (flags & (overflow | NaN))
         return *this;
 
-    GncInt128 a (isNeg() ? -(*this) : *this);
-    if (b.isNeg()) b = -b;
+    if (get_num(b.m_hi) == 0 && b.m_lo == 0)
+        return *this;
+    if (get_num(m_hi) == 0 && m_lo == 0)
+        return b;
+
+    GncInt128 a ((flags & neg) ? -(*this) : *this);
+    if (bflags & neg) b = -b;
 
     unsigned int k {};
     const uint64_t one {1};
@@ -309,7 +313,7 @@ GncInt128::operator-() const noexcept
 {
     auto retval = *this;
     auto flags = get_flags(retval.m_hi);
-    if (isNeg())
+    if (flags & neg)
         flags ^= neg;
     else
         flags |= neg;
@@ -350,14 +354,12 @@ GncInt128&
 GncInt128::operator+= (const GncInt128& b) noexcept
 {
     auto flags = get_flags(m_hi);
-    if (b.isOverflow())
-        flags |= overflow;
-    if (b.isNan())
-        flags |= NaN;
+    auto bflags = get_flags(b.m_hi);
+    flags |= bflags & (overflow | NaN);
     m_hi = set_flags(m_hi, flags);
-    if (isOverflow() || isNan())
+    if (flags & (overflow | NaN))
         return *this;
-    if ((isNeg () && !b.isNeg ()) || (!isNeg () && b.isNeg ()))
+    if (((flags | bflags) & neg) && (flags & neg) != (bflags & neg))
         return this->operator-= (-b);
     uint64_t result = m_lo + b.m_lo;
     uint64_t carry = static_cast<int64_t>(result < m_lo);  //Wrapping
@@ -430,16 +432,14 @@ GncInt128&
 GncInt128::operator-= (const GncInt128& b) noexcept
 {
     auto flags = get_flags(m_hi);
-    if (b.isOverflow())
-        flags |= overflow;
-    if (b.isNan())
-        flags |= NaN;
+    auto bflags = get_flags(b.m_hi);
+    flags |= bflags & (overflow | NaN);
     m_hi = set_flags(m_hi, flags);
 
-    if (isOverflow() || isNan())
+    if (flags & (overflow | NaN))
         return *this;
 
-    if ((!isNeg() && b.isNeg()) || (isNeg() && !b.isNeg()))
+    if (((flags | bflags) & neg) && (flags & neg) != (bflags & neg))
         return this->operator+= (-b);
     bool operand_bigger {abs().cmp (b.abs()) < 0};
     auto hi = get_num(m_hi);
@@ -479,22 +479,19 @@ GncInt128::operator*= (const GncInt128& b) noexcept
 {
     /* Test for 0 first */
     auto flags = get_flags(m_hi);
+    auto bflags = get_flags(b.m_hi);
     /* Handle the sign; ^ flips if b is negative */
-    flags ^= (get_flags(b.m_hi) & neg);
+    flags ^= (bflags & neg);
     if (isZero() || b.isZero())
     {
         m_lo = 0;
         m_hi = set_flags(0, flags);
         return *this;
     }
-    if (b.isOverflow())
-        flags |= overflow;
-    if (b.isNan())
-        flags |= NaN;
+    flags |= bflags & (overflow | NaN);
     m_hi = set_flags(m_hi, flags);
-    if (isOverflow() || isNan())
+    if (flags & (overflow | NaN))
         return *this;
-
     /* Test for overflow before spending time on the calculation */
     auto hi = get_num(m_hi);
     auto bhi = get_num(b.m_hi);
@@ -730,9 +727,12 @@ GncInt128::div (const GncInt128& b, GncInt128& q, GncInt128& r) const noexcept
     r = GncInt128(0);
     q = GncInt128(0);
 
+    auto flags = get_flags(m_hi);
+    auto bflags = get_flags(b.m_hi);
+
     auto qflags = get_flags(q.m_hi);
     auto rflags = get_flags(r.m_hi);
-    if (isOverflow() || b.isOverflow())
+    if ((flags | bflags) & overflow)
     {
         qflags |= overflow;
         rflags |= overflow;
@@ -741,7 +741,7 @@ GncInt128::div (const GncInt128& b, GncInt128& q, GncInt128& r) const noexcept
         return;
     }
 
-    if (isNan() || b.isNan())
+    if ((flags | bflags) & NaN)
     {
         qflags |= NaN;
         rflags |= NaN;
@@ -756,7 +756,9 @@ GncInt128::div (const GncInt128& b, GncInt128& q, GncInt128& r) const noexcept
 
     q.zero(), r.zero();
     qflags = rflags = 0;
-    if (b.isZero())
+
+    auto bhi = get_num(b.m_hi);
+    if (bhi == 0 && b.m_lo == 0)
     {
         qflags |= NaN;
         rflags |= NaN;
@@ -765,13 +767,13 @@ GncInt128::div (const GncInt128& b, GncInt128& q, GncInt128& r) const noexcept
         return;
     }
 
-    if (isNeg())
+    if (flags & neg)
     {
         qflags |= neg;
         rflags |= neg;          // the remainder inherits the dividend's sign
     }
 
-    if (b.isNeg())
+    if (bflags & neg)
         qflags ^= neg;
 
     q.m_hi = set_flags(q.m_hi, qflags);
@@ -783,7 +785,6 @@ GncInt128::div (const GncInt128& b, GncInt128& q, GncInt128& r) const noexcept
         return;
     }
     auto hi = get_num(m_hi);
-    auto bhi = get_num(b.m_hi);
 
     if (hi == 0 && bhi == 0) //let the hardware do it
     {
@@ -831,12 +832,9 @@ GncInt128&
 GncInt128::operator&= (const GncInt128& b) noexcept
 {
     auto flags = get_flags(m_hi);
-    if (b.isOverflow())
-        flags |= overflow;
-    if (b.isNan())
-        flags |= NaN;
+    flags |= get_flags(b.m_hi) & (overflow | NaN);
     m_hi = set_flags(m_hi, flags);
-    if (isOverflow() || isNan())
+    if (flags & (overflow | NaN))
         return *this;
     auto hi = get_num(m_hi);
     hi &= get_num(b.m_hi);
@@ -860,12 +858,9 @@ GncInt128&
 GncInt128::operator^= (const GncInt128& b) noexcept
 {
     auto flags = get_flags(m_hi);
-    if (b.isOverflow())
-        flags |= overflow;
-    if (b.isNan())
-        flags |= NaN;
+    flags |= get_flags(b.m_hi) & (overflow | NaN);
     m_hi = set_flags(m_hi, flags);
-    if (isOverflow() || isNan())
+    if (flags & (overflow | NaN))
         return *this;
     auto hi = get_num(m_hi);
     hi ^= get_num(b.m_hi);
