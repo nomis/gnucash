@@ -753,9 +753,13 @@ gnc_price_list_insert(PriceList **prices, GNCPrice *p, gboolean check_dupl)
         {
             return TRUE;
         }
-    }
 
-    result_list = g_list_insert_sorted(*prices, p, compare_prices_by_date);
+        result_list = g_list_insert_sorted(*prices, p, compare_prices_by_date);
+    }
+    else
+    {
+        result_list = g_list_append(*prices, p);
+    }
     if (!result_list) return FALSE;
     *prices = result_list;
     return TRUE;
