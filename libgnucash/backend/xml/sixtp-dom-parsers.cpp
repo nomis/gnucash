@@ -500,18 +500,18 @@ dom_tree_to_text (xmlNodePtr tree)
     /* no nodes means it's an empty string text */
     if (!tree->xmlChildrenNode)
     {
-        DEBUG ("No children");
+        //DEBUG ("No children");
         return g_strdup ("");
     }
 
     temp = (char*)xmlNodeListGetString (NULL, tree->xmlChildrenNode, TRUE);
     if (!temp)
     {
-        DEBUG ("Null string");
+        //DEBUG ("Null string");
         return NULL;
     }
 
-    DEBUG ("node string [%s]", (temp == NULL ? "(null)" : temp));
+    //DEBUG ("node string [%s]", (temp == NULL ? "(null)" : temp));
     result = g_strdup (temp);
     xmlFree (temp);
     return result;
