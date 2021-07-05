@@ -427,15 +427,15 @@ GncDateTimeImpl::GncDateTimeImpl(const char* str) :
         static const boost::regex non_delim("^(\\d{14}(?:\\.\\d{0,9})?)\\s*([+-]\\d{2}\\s*(:?\\d{2})?)?$");
         PTime pdt;
         boost::cmatch sm;
-        if (regex_match(str, sm, non_delim))
+        if (regex_match(str, sm, delim_iso))
+        {
+            pdt = boost::posix_time::time_from_string(sm[1]);
+        }
+        else if (regex_match(str, sm, non_delim))
         {
             std::string time_str(sm[1]);
             time_str.insert(8, "T");
             pdt = boost::posix_time::from_iso_string(time_str);
-        }
-        else if (regex_match(str, sm, delim_iso))
-        {
-            pdt = boost::posix_time::time_from_string(sm[1]);
         }
         else
         {
