@@ -165,6 +165,8 @@ log4glib_handler(const gchar     *log_domain,
                  const gchar     *message,
                  gpointer        user_data)
 {
+    return;
+
     QofLogLevel level = static_cast<QofLogLevel>(log_level);
     if (G_LIKELY(!qof_log_check(log_domain, level)))
         return;
@@ -321,6 +323,7 @@ qof_log_set_level(QofLogModule log_module, QofLogLevel level)
 gboolean
 qof_log_check(QofLogModule domain, QofLogLevel level)
 {
+    return FALSE;
 
     auto module = get_modules();
     // If the level is < the default then no need to look further.
