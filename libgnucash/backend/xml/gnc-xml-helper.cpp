@@ -28,6 +28,7 @@
 xmlChar*
 checked_char_cast (gchar* val)
 {
+#if 0
     const int length = -1; /* Assumes val is null-terminated */
     gchar* end;
     if (val == NULL) return NULL;
@@ -45,5 +46,6 @@ checked_char_cast (gchar* val)
         if (*end > 0 && *end < 0x20 && *end != 0x09 &&
             *end != 0x0a && *end != 0x0d)
             *end = '?';
+#endif
     return (xmlChar*) (val);
 }
