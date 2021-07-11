@@ -859,8 +859,11 @@ qof_session_load_from_xml_file_v2_full (
     gnc_account_foreach_descendant (template_root,
                                     (AccountCb) xaccAccountCommitEdit,
                                     NULL);
-    xaccAccountCommitEdit(root);
-    xaccAccountCommitEdit(template_root);
+    /* if these exist in the XML file then they will be uncommitted */
+    if (qof_instance_get_editlevel(root) != 0)
+        xaccAccountCommitEdit(root);
+    if (qof_instance_get_editlevel(template_root) != 0)
+        xaccAccountCommitEdit(template_root);
 
     /* start logging again */
     xaccLogEnable ();
