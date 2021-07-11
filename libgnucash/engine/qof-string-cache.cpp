@@ -66,11 +66,18 @@ qof_string_cache_init(void)
     (void)qof_get_string_cache();
 }
 
+static void
+qof_string_cache_print (gpointer key, gpointer value, gpointer user_data)
+{
+    printf("qof_string_cache_print: \"%s\" = %d\n", (const char*)key, *(guint*)value);
+}
+
 void
 qof_string_cache_destroy (void)
 {
     if (qof_string_cache)
     {
+        g_hash_table_foreach(qof_string_cache, qof_string_cache_print, NULL);
         g_hash_table_destroy(qof_string_cache);
     }
     qof_string_cache = NULL;
@@ -97,6 +104,10 @@ qof_string_cache_remove(const char * key)
             {
                 --(*refcount);
             }
+        }
+        else
+        {
+            printf("qof_string_cache_remove: string not present: %s\n", key);
         }
     }
 }
