@@ -182,7 +182,7 @@ _wipe_parsed_sx_var(gchar *key, GncSxVariable *var, gpointer unused_user_data)
 }
 
 static gboolean
-split_is_marker(Split *split)
+_split_is_marker(Split *split)
 {
     gchar *credit_formula = NULL;
     gchar *debit_formula = NULL;
@@ -1238,7 +1238,7 @@ get_transaction_currency(SxTxnCreationData *creation_data,
         if (!fallback_cmdty)
             fallback_cmdty = xaccAccountGetCommodity (split_account);
 
-        if (split_is_marker(t_split))
+        if (_split_is_marker(t_split))
              continue;
 
         split_cmdty = xaccAccountGetCommodity (split_account);
