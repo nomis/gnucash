@@ -1238,8 +1238,10 @@ get_transaction_currency(SxTxnCreationData *creation_data,
         if (!fallback_cmdty)
             fallback_cmdty = xaccAccountGetCommodity (split_account);
 
+#if 0
         if (_split_is_marker(t_split))
              continue;
+#endif
 
         split_cmdty = xaccAccountGetCommodity (split_account);
         if (!txn_cmdty)
