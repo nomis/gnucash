@@ -1249,6 +1249,8 @@ gnc_xfer_dialog_is_exchange_dialog (XferDialog *xferData,
 
     xferData->exch_rate = exch_rate;
 
+    gtk_toggle_button_set_active(GTK_TOGGLE_BUTTON(xferData->amount_radio), TRUE);
+
     LEAVE(" ");
 }
 
