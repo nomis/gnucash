@@ -546,10 +546,10 @@ gnc_plugin_page_sx_list_create_widget (GncPluginPage *plugin_page)
     gnc_widget_style_context_add_class (GTK_WIDGET(label), "gnc-class-strong");
     gtk_widget_set_margin_start (GTK_WIDGET(label), 6);
     gnc_label_set_alignment (label, 0.0, 0);
-    gtk_widget_show (label);
+    //gtk_widget_show (label);
 
     gtk_box_pack_start (GTK_BOX(vbox), label, FALSE, FALSE, 0);
-    gtk_widget_show (vbox);
+    //gtk_widget_show (vbox);
 
     /* Create scrolled window for bottom area */
     swin = gtk_scrolled_window_new (NULL, NULL);
@@ -557,7 +557,7 @@ gnc_plugin_page_sx_list_create_widget (GncPluginPage *plugin_page)
                                     GTK_POLICY_AUTOMATIC,
                                     GTK_POLICY_AUTOMATIC);
     gtk_box_pack_start (GTK_BOX(vbox), swin, TRUE, TRUE, 5);
-    gtk_widget_show (swin);
+    //gtk_widget_show (swin);
 
     {
         priv->dense_cal_model = gnc_sx_instance_dense_cal_adapter_new (GNC_SX_INSTANCE_MODEL(priv->instances));
