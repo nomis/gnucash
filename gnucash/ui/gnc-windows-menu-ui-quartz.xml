@@ -4,7 +4,12 @@
     <menu name="Windows" action="WindowsAction">
       <menuitem name="WindowNew" action="WindowNewAction"/>
       <menuitem name="WindowMovePage" action="WindowMovePageAction"/>
-      <separator name="ViewSep4"/>
+      <separator name="ViewSep1"/>
+      <menuitem name="WindowTabPositionTop" action="WindowTabPositionTopAction"/>
+      <menuitem name="WindowTabPositionBottom" action="WindowTabPositionBottomAction"/>
+      <menuitem name="WindowTabPositionLeft" action="WindowTabPositionLeftAction"/>
+      <menuitem name="WindowTabPositionRight" action="WindowTabPositionRightAction"/>
+      <separator name="ViewSep2"/>
       <placeholder name="WindowsPlaceholder"/>
     </menu>
   </menubar>
