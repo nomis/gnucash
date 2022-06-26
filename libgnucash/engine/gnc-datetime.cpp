@@ -362,6 +362,11 @@ GncDateTimeImpl::GncDateTimeImpl(std::string str) :
     {
         static const boost::regex delim_iso("^(\\d{4}-\\d{2}-\\d{2} \\d{2}:\\d{2}:\\d{2}(?:\\.\\d{0,9})?)\\s*([+-]\\d{2}(?::?\\d{2})?)?$");
         static const boost::regex non_delim("^(\\d{14}(?:\\.\\d{0,9})?)\\s*([+-]\\d{2}\\s*(:?\\d{2})?)?$");
+        if (str.length() == 25 && str[4] == '-' && str[7] == '-' && str[10] == ' ' && str[13] == ':' && str[16] == ':' && str[19] == ' ') {
+            m_time = LDT_from_date_time(Date(std::stoi(str.substr(0, 4)), std::stoi(str.substr(5, 2)), std::stoi(str.substr(8, 2))),
+                Duration(std::stoi(str.substr(11, 2)), std::stoi(str.substr(14, 2)), std::stoi(str.substr(17, 2))), tz_from_string(str.substr(21)));
+            return;
+        }
         PTime pdt;
         boost::smatch sm;
         if (regex_match(str, sm, delim_iso))
