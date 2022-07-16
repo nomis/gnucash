@@ -28,6 +28,7 @@
 #include <Windows.h>
 #include <fcntl.h>
 #endif
+#include <sys/resource.h>
 
 #include "gnucash-commands.hpp"
 #include "gnucash-core-app.hpp"
@@ -285,6 +286,8 @@ Gnucash::Gnucash::start ([[maybe_unused]] int argc, [[maybe_unused]] char **argv
 int
 main(int argc, char ** argv)
 {
+    struct rlimit rlim = { RLIM_INFINITY, RLIM_INFINITY };
+    setrlimit(RLIMIT_CORE, &rlim);
     Gnucash::Gnucash application (PROJECT_NAME);
 #ifdef __MINGW32__
     boost::nowide::args a(argc, argv); // Fix arguments - make them UTF-8
