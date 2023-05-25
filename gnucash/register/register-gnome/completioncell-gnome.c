@@ -69,6 +69,7 @@ typedef struct _PopBox
 
     gint          occurrence; // the position in the list
     time64        time_now; // the current time
+    gboolean      add_separator; // need separator
 
 } PopBox;
 
@@ -128,6 +129,7 @@ gnc_completion_cell_init (CompletionCell* cell)
                                              G_TYPE_INT);
     box->signals_connected = FALSE;
     box->list_popped = FALSE;
+    box->add_separator = FALSE;
     box->autosize = FALSE;
     box->register_is_reversed = FALSE;
 
@@ -149,6 +151,7 @@ hide_popup (PopBox* box)
 {
     gnc_item_edit_hide_popup (box->item_edit);
     box->list_popped = FALSE;
+    box->add_separator = FALSE;
 }
 
 static void
@@ -325,6 +328,20 @@ sort_func (GtkTreeModel* model, GtkTreeIter* iter_a, GtkTreeIter* iter_b, gpoint
         ret = -1;
     else if (a_weight > b_weight)
         ret = 1;
+
+    return ret;
+}
+
+static gboolean
+separator_func (GtkTreeModel* model, GtkTreeIter* iter, gpointer user_data)
+{
+    gint weight;
+    gboolean ret = FALSE;
+
+    gtk_tree_model_get (model, iter, WEIGHT_COL, &weight, -1);
+
+    if (weight == SEPARATOR)
+        ret = TRUE;
 
     return ret;
 }
@@ -533,6 +550,9 @@ add_item (gpointer key, gpointer value, gpointer user_data)
             if (g_strcmp0 (key_norm_fold, box->newval) == 0) // exact match
                 weight = 1;
 
+            if (weight > SEPARATOR)
+                box->add_separator = TRUE;
+
             list_store_append (box->item_store, key, markup, weight);
 
             g_free (markup);
@@ -551,6 +571,7 @@ select_first_entry_in_list (PopBox* box)
     GtkTreeModel *model = gtk_tree_view_get_model (box->item_list->tree_view);
     GtkTreeIter iter;
     gchar* string;
+    gint weight;
 
     if (!gtk_tree_model_get_iter_first (model, &iter))
         return;
@@ -558,6 +579,15 @@ select_first_entry_in_list (PopBox* box)
     if (!gtk_tree_model_iter_next (model, &iter))
         return;
 
+    gtk_tree_model_get (model, &iter, TEXT_COL, &string,
+                                      WEIGHT_COL, &weight, -1);
+
+    if (weight == SEPARATOR)
+    {
+        g_free (string);
+        if (!gtk_tree_model_iter_next (model, &iter))
+            return;
+    }
     gtk_tree_model_get (model, &iter, TEXT_COL, &string, -1);
 
     gnc_item_list_select (box->item_list, string);
@@ -586,6 +616,7 @@ populate_list_store (CompletionCell* cell, const gchar* str)
         return;
 
     box->time_now = gnc_time (NULL);
+    box->add_separator = FALSE;
 
     // disconnect list store from tree view
     box->item_store = gnc_item_list_disconnect_store (box->item_list);
@@ -605,6 +636,13 @@ populate_list_store (CompletionCell* cell, const gchar* str)
     // add to the list store
     g_hash_table_foreach (box->item_hash, add_item, box);
 
+    // add seperator
+    if (box->add_separator)
+    {
+        list_store_append (box->item_store, " ", " ", SEPARATOR);
+        default_children = 2;
+    }
+
     if (box->sort_enabled) // if sorting, enable it
         set_sort_column_enabled (box, TRUE);
 
@@ -613,7 +651,7 @@ populate_list_store (CompletionCell* cell, const gchar* str)
     // reconnect list store to tree view
     gnc_item_list_connect_store (box->item_list, box->item_store);
 
-    // if no entries, do not show popup
+    // if just "don't entry" and/or separator, do not show popup
     if (gtk_tree_model_iter_n_children (GTK_TREE_MODEL(box->item_store), NULL) == default_children)
     {
         box->stop_searching = TRUE;
@@ -778,7 +816,12 @@ reset_item_list_to_default_setup (BasicCell* bcell)
     gtk_tree_view_column_clear_attributes (column,box->item_list->renderer);
     gtk_tree_view_column_add_attribute (column, box->item_list->renderer,
                                         "text", TEXT_COL);
+
+    gtk_tree_view_set_row_separator_func (GTK_TREE_VIEW(box->item_list->tree_view),
+                                          NULL, NULL, NULL);
+
     box->list_popped = FALSE;
+    box->add_separator = FALSE;
 }
 
 static void
@@ -809,6 +852,23 @@ popup_get_height (G_GNUC_UNUSED GtkWidget* widget,
     gboolean overlay = gtk_style_context_has_class (context, "overlay-indicator");
     int count = gnc_item_list_num_entries (box->item_list);
     int height = count * (gnc_item_list_get_cell_height (box->item_list) + 2);
+
+    if (box->add_separator)
+    {
+        GValue value = G_VALUE_INIT;
+        GtkStyleContext *stylectxt = gtk_widget_get_style_context (GTK_WIDGET(box->item_list->tree_view));
+        gtk_style_context_save (stylectxt);
+        gtk_style_context_add_class (stylectxt, GTK_STYLE_CLASS_SEPARATOR);
+        gtk_style_context_get_property (stylectxt, "min-height", GTK_STATE_FLAG_NORMAL, &value);
+        gint min_height = g_value_get_int (&value);
+
+        min_height = min_height < 2 ? 2 : min_height;
+
+        height = height - gnc_item_list_get_cell_height (box->item_list) + (min_height - 2);
+
+        gtk_style_context_restore (stylectxt);
+        g_value_unset (&value);
+    }
 
     if (!overlay)
     {
@@ -903,6 +963,9 @@ gnc_completion_cell_enter (BasicCell* bcell,
     gtk_tree_view_column_clear_attributes (column, box->item_list->renderer);
     gtk_tree_view_column_add_attribute (column, box->item_list->renderer,
                                         "markup", TEXT_MARKUP_COL);
+
+    gtk_tree_view_set_row_separator_func (GTK_TREE_VIEW(box->item_list->tree_view),
+                                          separator_func, box, NULL);
 
     completion_connect_signals (cell);
 
