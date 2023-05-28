@@ -32,6 +32,7 @@
 #include <ctype.h>
 #include <stdlib.h>
 #include <string.h>
+#include <execinfo.h>
 #include "qof.h"
 
 /* Uncomment if you need to log anything.
@@ -66,6 +67,56 @@ qof_string_cache_init(void)
     (void)qof_get_string_cache();
 }
 
+extern "C" {
+static char **backtrace_strings = nullptr;
+static int backtrace_size = 0;
+
+void store_backtrace();
+void store_backtrace()
+{
+#if 1
+  void *array[1024] = {};
+
+  free(backtrace_strings);
+  backtrace_size = backtrace(array, 1024);
+  backtrace_strings = backtrace_symbols(array, backtrace_size);
+#endif
+}
+
+void print_backtrace();
+void print_backtrace()
+{
+  if (backtrace_strings != NULL)
+  {
+    printf ("Obtained %d stack frames.\n", backtrace_size);
+    for (int i = 0; i < backtrace_size; i++)
+      printf ("%s\n", backtrace_strings[i]);
+  }
+}
+
+const char *get_backtrace();
+const char *get_backtrace()
+{
+  char *buf = (char*)calloc(1, 65536);
+
+  if (backtrace_strings != NULL)
+  {
+    for (int i = 0; i < backtrace_size; i++)
+    {
+      strncat(buf, backtrace_strings[i], 65535);
+      strncat(buf, "\n", 65535);
+    }
+    return buf;
+  }
+  else
+  {
+      return "";
+  }
+}
+
+//
+}
+
 static void
 qof_string_cache_print (gpointer key, gpointer value, gpointer user_data)
 {
@@ -83,6 +134,15 @@ qof_string_cache_destroy (void)
     qof_string_cache = NULL;
 }
 
+void blah(const char *op);
+void blah(const char *op) {
+	store_backtrace();
+    printf("%s:\n", op);
+	print_backtrace();
+	printf("----\n");
+	sched_yield();
+}
+
 /* If the key exists in the cache, check the refcount.  If 1, just
  * remove the key.  Otherwise, decrement the refcount */
 void
@@ -90,6 +150,12 @@ qof_string_cache_remove(const char * key)
 {
     if (key && key[0] != 0)
     {
+#if 0
+        if (!strcmp(key, "Account")) {
+            blah("remove");
+        }
+#endif
+
         GHashTable* cache = qof_get_string_cache();
         gpointer value;
         gpointer cache_key;
@@ -123,6 +189,14 @@ qof_string_cache_insert(const char * key)
         {
             return "";
         }
+
+#if 0
+        if (!strcmp(key, "Account")) {
+            //blah("insert");
+            store_backtrace();
+            key = get_backtrace();
+        }
+#endif
 
         GHashTable* cache = qof_get_string_cache();
         gpointer value;
