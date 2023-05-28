@@ -20,6 +20,7 @@
 #include <config.h>
 
 #include <stdio.h>
+#include <sys/time.h>
 
 #include "gnc-component-manager.h"
 #include "qof.h"
@@ -667,11 +668,14 @@ gnc_gui_refresh_internal (gboolean force)
 {
     GList *list;
     GList *node;
+    struct timeval tv_before, tv_after, tv_duration;
 
     if (!got_events && !force)
         return;
 
     gnc_suspend_gui_refresh ();
+
+    gettimeofday(&tv_before, NULL);
 
     {
         GHashTable *table;
@@ -740,6 +744,18 @@ gnc_gui_refresh_internal (gboolean force)
     got_events = FALSE;
 
     g_list_free (list);
+
+    gettimeofday(&tv_after, NULL);
+    tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;
+    tv_duration.tv_usec = tv_after.tv_usec - tv_before.tv_usec;
+    if (tv_duration.tv_usec < 0) {
+		tv_duration.tv_usec += 1000000;
+		tv_duration.tv_sec--;
+    }
+    if (tv_duration.tv_sec || tv_duration.tv_usec >= 500) {
+        printf("%s: %lu.%06lus\n", __func__, tv_duration.tv_sec, tv_duration.tv_usec);
+        fflush(stdout);
+    }
 
     gnc_resume_gui_refresh ();
 }
