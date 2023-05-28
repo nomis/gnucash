@@ -27,6 +27,8 @@
 #include <gtk/gtk.h>
 #include <glib/gi18n.h>
 #include <stdlib.h>
+#include <sys/time.h>
+#include <stdio.h>
 
 #include "TransLog.h"
 #include "business-options-gnome.h"
@@ -281,6 +283,9 @@ gnc_restore_all_state (gpointer session, gpointer unused)
     gchar *file_guid = NULL;
     GError *error = NULL;
 
+    struct timeval tv_before, tv_after, tv_duration;
+    gettimeofday(&tv_before, NULL);
+
     keyfile = gnc_state_load (session);
 
 #ifdef DEBUG
@@ -317,6 +322,16 @@ gnc_restore_all_state (gpointer session, gpointer unused)
     }
 
     gnc_main_window_restore_all_windows(keyfile);
+
+    gettimeofday(&tv_after, NULL);
+    tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;
+    tv_duration.tv_usec = tv_after.tv_usec - tv_before.tv_usec;
+    if (tv_duration.tv_usec < 0) {
+		tv_duration.tv_usec += 1000000;
+		tv_duration.tv_sec--;
+    }
+    printf("gnc_restore_all_state: %lu.%06lus\n", tv_duration.tv_sec, tv_duration.tv_usec);
+    fflush(stdout);
 
     /* Clean up */
     LEAVE("ok");
