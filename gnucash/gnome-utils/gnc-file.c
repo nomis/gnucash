@@ -25,6 +25,8 @@
 #include <glib/gi18n.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/time.h>
+#include <stdio.h>
 
 #include "dialog-utils.h"
 #include "assistant-xml-encoding.h"
@@ -578,7 +580,18 @@ gnc_add_history (QofSession * session)
 static void
 gnc_book_opened (void)
 {
+    struct timeval tv_before, tv_after, tv_duration;
+    gettimeofday(&tv_before, NULL);
     gnc_hook_run(HOOK_BOOK_OPENED, gnc_get_current_session());
+    gettimeofday(&tv_after, NULL);
+    tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;
+    tv_duration.tv_usec = tv_after.tv_usec - tv_before.tv_usec;
+    if (tv_duration.tv_usec < 0) {
+		tv_duration.tv_usec += 1000000;
+		tv_duration.tv_sec--;
+    }
+    printf("gnc_book_opened: %lu.%06lus\n", tv_duration.tv_sec, tv_duration.tv_usec);
+    fflush(stdout);
 }
 
 void
@@ -740,6 +753,8 @@ gnc_post_file_open (GtkWindow *parent, const char * filename, gboolean is_readon
     gchar *path = NULL;
     gint32 port = 0;
 
+    struct timeval tv_before, tv_after, tv_duration;
+    gettimeofday(&tv_before, NULL);
 
     ENTER("filename %s", filename);
 RESTART:
@@ -1127,6 +1142,16 @@ RESTART:
     }
 
     run_post_load_scrubs (parent, new_book);
+
+    gettimeofday(&tv_after, NULL);
+    tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;
+    tv_duration.tv_usec = tv_after.tv_usec - tv_before.tv_usec;
+    if (tv_duration.tv_usec < 0) {
+		tv_duration.tv_usec += 1000000;
+		tv_duration.tv_sec--;
+    }
+    printf("gnc_post_file_open: %lu.%06lus\n", tv_duration.tv_sec, tv_duration.tv_usec);
+    fflush(stdout);
 
     return TRUE;
 }

@@ -44,6 +44,8 @@
 #endif
 #include <zlib.h>
 #include <errno.h>
+#include <sys/time.h>
+#include <stdio.h>
 
 #include "gnc-engine.h"
 #include "gnc-pricedb-p.h"
@@ -871,7 +873,20 @@ gboolean
 qof_session_load_from_xml_file_v2 (GncXmlBackend* xml_be, QofBook* book,
                                    QofBookFileType type)
 {
-    return qof_session_load_from_xml_file_v2_full (xml_be, book, NULL, NULL, type);
+    gboolean ret;
+    struct timeval tv_before, tv_after, tv_duration;
+    gettimeofday(&tv_before, NULL);
+    ret = qof_session_load_from_xml_file_v2_full (xml_be, book, NULL, NULL, type);
+    gettimeofday(&tv_after, NULL);
+    tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;
+    tv_duration.tv_usec = tv_after.tv_usec - tv_before.tv_usec;
+    if (tv_duration.tv_usec < 0) {
+		tv_duration.tv_usec += 1000000;
+		tv_duration.tv_sec--;
+    }
+    printf("qof_session_load_from_xml_file_v2: %lu.%06lus\n", tv_duration.tv_sec, tv_duration.tv_usec);
+    fflush(stdout);
+    return ret;
 }
 
 /***********************************************************************/

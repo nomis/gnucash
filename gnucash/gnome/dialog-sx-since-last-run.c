@@ -35,6 +35,8 @@
 #include <config.h>
 #include <glib.h>
 #include <gtk/gtk.h>
+#include <sys/time.h>
+#include <stdio.h>
 
 #include "dialog-utils.h"
 #include "gnc-sx-instance-model.h"
@@ -828,6 +830,9 @@ gnc_sx_sxsincelast_book_opened (void)
     GList *creation_errors = NULL;
     GncSxInstanceModel *inst_model;
     GncSxSummary summary;
+    struct timeval tv_before, tv_after, tv_duration;
+
+    gettimeofday(&tv_before, NULL);
 
     if (!gnc_prefs_get_bool (GNC_PREFS_GROUP_STARTUP, GNC_PREF_RUN_AT_FOPEN))
         return;
@@ -876,6 +881,16 @@ gnc_sx_sxsincelast_book_opened (void)
 
     if (creation_errors)
         creation_error_dialog (&creation_errors);
+
+    gettimeofday(&tv_after, NULL);
+    tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;
+    tv_duration.tv_usec = tv_after.tv_usec - tv_before.tv_usec;
+    if (tv_duration.tv_usec < 0) {
+		tv_duration.tv_usec += 1000000;
+		tv_duration.tv_sec--;
+    }
+    printf("gnc_sx_sxsincelast_book_opened: %lu.%06lus\n", tv_duration.tv_sec, tv_duration.tv_usec);
+    fflush(stdout);
 }
 
 static void
