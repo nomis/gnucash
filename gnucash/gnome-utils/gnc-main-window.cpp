@@ -662,7 +662,6 @@ gnc_main_window_restore_window (GncMainWindow *window, GncMainWindowSaveData *da
         goto cleanup;
     }
 
-
     /* Get this window's notebook info */
     page_count = g_key_file_get_integer(data->key_file,
                                         window_group, WINDOW_PAGECOUNT, &error);
@@ -771,19 +770,51 @@ gnc_main_window_restore_window (GncMainWindow *window, GncMainWindowSaveData *da
         }
         g_variant_unref (state);
     }
+
     priv->restoring_pages = TRUE;
     /* Now populate the window with pages. */
     for (i = 0; i < page_count; i++)
     {
+        struct timeval tv_before, tv_after1, tv_after2, tv_duration1, tv_duration2;
+
+        gettimeofday(&tv_before, NULL);
+
         data->page_offset = page_start;
         data->page_num = i;
         gnc_main_window_restore_page(window, data);
 
+        gettimeofday(&tv_after1, NULL);
+
         /* give the page a chance to display */
         while (gtk_events_pending ())
             gtk_main_iteration ();
+
+        gettimeofday(&tv_after2, NULL);
+
+        tv_duration1.tv_sec = tv_after1.tv_sec - tv_before.tv_sec;
+        tv_duration1.tv_usec = tv_after1.tv_usec - tv_before.tv_usec;
+        if (tv_duration1.tv_usec < 0) {
+            tv_duration1.tv_usec += 1000000;
+            tv_duration1.tv_sec--;
+        }
+        tv_duration2.tv_sec = tv_after2.tv_sec - tv_after1.tv_sec;
+        tv_duration2.tv_usec = tv_after2.tv_usec - tv_after1.tv_usec;
+        if (tv_duration2.tv_usec < 0) {
+            tv_duration2.tv_usec += 1000000;
+            tv_duration2.tv_sec--;
+        }
+        if (tv_duration1.tv_sec || tv_duration1.tv_usec >= 500
+                || tv_duration2.tv_sec || tv_duration2.tv_usec >= 500) {
+            printf("%s: page %zd: %lu.%06lus + %lu.%06lus\n", __func__, i,
+                tv_duration1.tv_sec, tv_duration1.tv_usec,
+                tv_duration2.tv_sec, tv_duration2.tv_usec);
+            fflush(stdout);
+        }
     }
     priv->restoring_pages = FALSE;
+
+    printf("gnc_main_window_restore_window: restored pages\n"); fflush(stdout);
+
     /* Restore page ordering within the notebook. Use +1 notation so the
      * numbers in the page order match the page sections, at least for
      * the one window case. */
