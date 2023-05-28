@@ -139,8 +139,6 @@ extern gboolean gnc_book_options_dialog_apply_helper(GncOptionDB * options);
 
 /** The debugging module that this .o belongs to.  */
 static QofLogModule log_module = GNC_MOD_GUI;
-/** A pointer to the parent class of an embedded window. */
-static GObjectClass *parent_class = nullptr;
 /** An identifier that indicates a "main" window. */
 static GQuark window_type = 0;
 /** A list of all extant main windows. This is for convenience as the
@@ -152,9 +150,6 @@ static guint secs_to_save = 0;
 #define MSG_AUTO_SAVE _("Changes will be saved automatically in %u seconds")
 
 /* Declarations *********************************************************/
-static void gnc_main_window_class_init (GncMainWindowClass *klass);
-static void gnc_main_window_init (GncMainWindow *window,
-                                  void *data);
 static void gnc_main_window_finalize (GObject *object);
 static void gnc_main_window_destroy (GtkWidget *widget);
 
@@ -276,22 +271,6 @@ GNC_DEFINE_TYPE_WITH_CODE(GncMainWindow, gnc_main_window, GTK_TYPE_APPLICATION_W
  *  code. */
 static guint main_window_signals[LAST_SIGNAL] = { 0 };
 
-static void
-toggle_change_state (GSimpleAction *simple,
-                     GVariant      *state,
-                     gpointer       user_data)
-{
-    g_simple_action_set_state (simple, state);
-}
-
-static void
-radio_change_state (GSimpleAction *simple,
-                    GVariant      *state,
-                    gpointer       user_data)
-{
-    g_simple_action_set_state (simple, state);
-}
-
 /** An array of all of the actions provided by the main window code.
  *  This includes some placeholder actions for the menus that are
  *  visible in the menu bar but have no action associated with
@@ -317,10 +296,10 @@ static GActionEntry gnc_menu_actions [] =
     { "ViewSortByAction", nullptr, nullptr, nullptr, nullptr },
     { "ViewFilterByAction", nullptr, nullptr, nullptr, nullptr },
     { "ViewRefreshAction", gnc_main_window_cmd_view_refresh, nullptr, nullptr, nullptr },
-    { "ViewToolbarAction", gnc_main_window_cmd_view_toolbar, nullptr, "true", toggle_change_state },
-    { "ViewSummaryAction", gnc_main_window_cmd_view_summary, nullptr, "true", toggle_change_state },
-    { "ViewStatusbarAction", gnc_main_window_cmd_view_statusbar, nullptr, "true", toggle_change_state },
-    { "ViewTabPositionAction",  gnc_main_window_cmd_view_tab_position, "i", "@i 0", radio_change_state },
+    { "ViewToolbarAction", gnc_main_window_cmd_view_toolbar, nullptr, "true", nullptr },
+    { "ViewSummaryAction", gnc_main_window_cmd_view_summary, nullptr, "true", nullptr },
+    { "ViewStatusbarAction", gnc_main_window_cmd_view_statusbar, nullptr, "true", nullptr },
+    { "ViewTabPositionAction",  gnc_main_window_cmd_view_tab_position, "i", "@i 0", nullptr },
 
     { "ScheduledAction", nullptr, nullptr, nullptr, nullptr },
 
@@ -329,7 +308,7 @@ static GActionEntry gnc_menu_actions [] =
     { "WindowNewAction", gnc_main_window_cmd_window_new, nullptr, nullptr, nullptr },
     { "WindowMovePageAction", gnc_main_window_cmd_window_move_page, nullptr, nullptr, nullptr },
 #ifndef MAC_INTEGRATION
-    { "WindowAction",  gnc_main_window_cmd_window_raise, "i", "@i 0", radio_change_state },
+    { "WindowAction",  gnc_main_window_cmd_window_raise, "i", "@i 0", nullptr },
 #endif
     { "HelpTutorialAction", gnc_main_window_cmd_help_tutorial, nullptr, nullptr, nullptr },
     { "HelpContentsAction", gnc_main_window_cmd_help_contents, nullptr, nullptr, nullptr },
@@ -1833,6 +1812,7 @@ gnc_main_window_update_one_menu_action (GncMainWindow *window,
 
     gsm->search_action_label = nullptr;
     gsm->search_action_name = "WindowsPlaceholder1";  // placeholder
+    gsm->search_action_target = nullptr;
 
     if (!gnc_menubar_model_find_item (priv->menubar_model, gsm))
     {
@@ -2660,8 +2640,6 @@ gnc_main_window_class_init (GncMainWindowClass *klass)
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GtkWidgetClass *gtkwidget_class = GTK_WIDGET_CLASS(klass);
 
-    parent_class = static_cast<GObjectClass*>(g_type_class_peek_parent (klass));
-
     window_type = g_quark_from_static_string ("gnc-main-window");
 
     object_class->finalize = gnc_main_window_finalize;
@@ -2815,7 +2793,7 @@ gnc_main_window_finalize (GObject *object)
     }
 
     gnc_gobject_tracking_forget(object);
-    G_OBJECT_CLASS (parent_class)->finalize (object);
+    G_OBJECT_CLASS (gnc_main_window_parent_class)->finalize (object);
 }
 
 
@@ -2920,7 +2898,8 @@ gnc_main_window_destroy (GtkWidget *widget)
         g_list_foreach (plugins, gnc_main_window_remove_plugin, window);
         g_list_free (plugins);
     }
-    GTK_WIDGET_CLASS (parent_class)->destroy (widget);
+
+    GTK_WIDGET_CLASS (gnc_main_window_parent_class)->destroy (widget);
 }
 
 
@@ -3051,7 +3030,7 @@ gnc_main_window_engine_commit_error_callback( gpointer data,
  *
  *  @param tab_hbox The widget that should be added into the notebook
  *  tab for this page.  Generally this is a GtkLabel, but could also
- *  be a GtkHBox containing an icon and a label.
+ *  be a GtkBox containing an icon and a label.
  *
  *  @param menu_label The widget that should be added into the
  *  notebook popup menu for this page.  This should be a GtkLabel.
@@ -3477,6 +3456,7 @@ update_menu_model (GncMainWindow *window, const gchar *ui_filename,
 
         gsm->search_action_label = nullptr;
         gsm->search_action_name = ui_updates[i];
+        gsm->search_action_target = nullptr;
 
         if (gnc_menubar_model_find_item (priv->menubar_model, gsm))
             g_menu_insert_section (G_MENU(gsm->model), gsm->index, NULL, G_MENU_MODEL(menu_model_part));
@@ -3659,7 +3639,7 @@ gnc_main_window_update_menu_for_action (GncMainWindow *window,
     priv = GNC_MAIN_WINDOW_GET_PRIVATE(window);
 
     found =  gnc_menubar_model_update_item (priv->menubar_model, action_name,
-                                            _(label), nullptr, _(tooltip));
+                                            nullptr, _(label), nullptr, _(tooltip));
 
     // add tooltip redirect call backs
     gnc_plugin_add_menu_tooltip_callbacks (priv->menubar,
@@ -3840,6 +3820,7 @@ gnc_main_window_update_menu_and_toolbar (GncMainWindow *window,
 
         gsm->search_action_label = nullptr;
         gsm->search_action_name = ui_updates[i];
+        gsm->search_action_target = nullptr;
 
         if (gnc_menubar_model_find_item (priv->menubar_model, gsm))
             g_menu_insert_section (G_MENU(gsm->model), gsm->index,
@@ -5182,7 +5163,9 @@ static gboolean
 link_button_cb (GtkLinkButton *button, gpointer user_data)
 {
    const gchar *uri = gtk_link_button_get_uri (button);
-   gnc_launch_doclink (GTK_WINDOW(user_data), uri);
+   gchar *escaped_uri = g_uri_escape_string (uri, ":/.\\", true);
+   gnc_launch_doclink (GTK_WINDOW(user_data), escaped_uri);
+   g_free (escaped_uri);
    return TRUE;
 }
 
@@ -5191,7 +5174,6 @@ add_about_paths (GtkDialog *dialog)
 {
     GtkWidget *page_vbox = gnc_get_dialog_widget_from_id (dialog, "page_vbox");
     GtkWidget *grid;
-    GList *paths;
     gint i = 0;
 
     if (!page_vbox)
@@ -5201,15 +5183,12 @@ add_about_paths (GtkDialog *dialog)
     }
 
     grid = gtk_grid_new ();
-    paths = gnc_list_all_paths ();
 
-    for (GList *path_node = paths; path_node; path_node = g_list_next (path_node))
+    for (const auto& ep : gnc_list_all_paths ())
     {
-        EnvPaths *ep = (EnvPaths*)path_node->data;
-
-        gchar *env_name = g_strconcat (ep->env_name, ":", NULL);
+        gchar *env_name = g_strconcat (ep.env_name, ":", NULL);
         GtkWidget *label = gtk_label_new (env_name);
-        const gchar *uri = gnc_uri_create_uri ("file", NULL, 0, NULL, NULL, ep->env_path);
+        const gchar *uri = gnc_uri_create_uri ("file", NULL, 0, NULL, NULL, ep.env_path);
         gchar *display_uri = gnc_doclink_get_unescaped_just_uri (uri);
         GtkWidget *widget = gtk_link_button_new_with_label (uri, display_uri);
 
@@ -5220,7 +5199,7 @@ add_about_paths (GtkDialog *dialog)
         gtk_widget_set_margin_top (widget, 0);
         gtk_widget_set_margin_bottom (widget, 0);
 
-        if (ep->modifiable)
+        if (ep.modifiable)
         {
             GtkWidget *mod_lab = gtk_label_new (_("(user modifiable)"));
             gtk_grid_attach (GTK_GRID(grid), mod_lab, 2, i, 1, 1);
@@ -5236,7 +5215,6 @@ add_about_paths (GtkDialog *dialog)
     gtk_container_add_with_properties (GTK_CONTAINER(page_vbox), grid,
                                        "position", 1, NULL);
     gtk_widget_show_all (grid);
-    g_list_free_full (paths, g_free);
 }
 
 /** Create and display the "about" dialog for gnucash.
@@ -5456,7 +5434,7 @@ gnc_main_window_get_toolbar (GncWindow *window)
     return priv->toolbar;
 }
 
-/** Retrieve the display hash table associated with a main window object.
+/** Retrieve the menubar model associated with a main window object.
  *  This function is called via a vector off a generic window
  *  interface.
  *
@@ -5473,6 +5451,22 @@ gnc_main_window_get_menubar_model (GncWindow *window)
     return priv->menubar_model;
 }
 
+/** Retrieve the accelerator group associated with a main window object.
+ *  This function is called via a vector off a generic window
+ *  interface.
+ *
+ *  @param window_in A pointer to a generic window. */
+static GtkAccelGroup *
+gnc_main_window_get_accel_group (GncWindow *window)
+{
+    GncMainWindowPrivate *priv;
+
+    g_return_val_if_fail (GNC_IS_MAIN_WINDOW(window), nullptr);
+
+    priv = GNC_MAIN_WINDOW_GET_PRIVATE(window);
+
+    return priv->accel_group;
+}
 
 /** Initialize the generic window interface for a main window.
  *
@@ -5487,6 +5481,7 @@ gnc_window_main_window_init (GncWindowIface *iface)
     iface->get_menubar         = gnc_main_window_get_menubar;
     iface->get_toolbar         = gnc_main_window_get_toolbar;
     iface->get_menubar_model   = gnc_main_window_get_menubar_model;
+    iface->get_accel_group     = gnc_main_window_get_accel_group;
 }
 
 

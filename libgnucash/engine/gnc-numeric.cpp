@@ -42,12 +42,13 @@
 
 static QofLogModule log_module = "qof";
 
-static const uint8_t max_leg_digits{17};
+static const uint8_t max_leg_digits{18};
 static const int64_t pten[] = { 1, 10, 100, 1000, 10000, 100000, 1000000,
                                10000000, 100000000, 1000000000,
                                INT64_C(10000000000), INT64_C(100000000000),
                                INT64_C(1000000000000), INT64_C(10000000000000),
                                INT64_C(100000000000000),
+                               INT64_C(1000000000000000),
                                INT64_C(10000000000000000),
                                INT64_C(100000000000000000),
                                INT64_C(1000000000000000000)};
@@ -91,7 +92,7 @@ GncNumeric::GncNumeric(double d) : m_num(0), m_den(1)
     int64_t den;
     uint8_t den_digits;
     if (logval > 0.0)
-        den_digits = (max_leg_digits + 1) - static_cast<int>(floor(logval) + 1.0);
+        den_digits = (max_leg_digits + 1) - static_cast<int>(floor(logval));
     else
         den_digits = max_leg_digits;
     den = powten(den_digits);
@@ -175,9 +176,18 @@ GncNumeric::GncNumeric(const std::string& str, bool autoround)
         GncInt128 high((neg && m[1].length() > 1) || (!neg && m[1].length()) ?
                        stoll(m[1].str()) : 0);
         GncInt128 low(stoll(m[2].str()));
-        int64_t d = powten(m[2].str().length());
+        auto exp10 = m[2].str().length();
+        int64_t d = powten(exp10);
         GncInt128 n = high * d + (neg ? -low : low);
-
+        while (exp10 > max_leg_digits)
+        {
+            /* If the arg to powten is bigger than max_leg_digits
+               it returns 10**max_leg_digits so reduce exp10 by
+               that amount */
+            n = n / powten(exp10 - max_leg_digits);
+            exp10 -= max_leg_digits;
+        }
+        
         if (!autoround && n.isBig())
         {
             std::ostringstream errmsg;
@@ -1240,10 +1250,9 @@ string_to_gnc_numeric(const gchar* str, gnc_numeric *n)
 /* *******************************************************************
  *  GValue handling
  ********************************************************************/
-static gpointer
-gnc_numeric_boxed_copy_func( gpointer in_ptr )
+static gnc_numeric*
+gnc_numeric_boxed_copy_func( gnc_numeric *in_gnc_numeric )
 {
-    auto in_gnc_numeric = static_cast<gnc_numeric*>(in_ptr);
     if (!in_gnc_numeric)
         return nullptr;
 
@@ -1255,25 +1264,12 @@ gnc_numeric_boxed_copy_func( gpointer in_ptr )
 }
 
 static void
-gnc_numeric_boxed_free_func( gpointer in_gnc_numeric )
+gnc_numeric_boxed_free_func( gnc_numeric *in_gnc_numeric )
 {
     g_free( in_gnc_numeric );
 }
 
-GType
-gnc_numeric_get_type( void )
-{
-    static GType type = 0;
-
-    if ( type == 0 )
-    {
-        type = g_boxed_type_register_static( "gnc_numeric",
-                                             gnc_numeric_boxed_copy_func,
-                                             gnc_numeric_boxed_free_func );
-    }
-
-    return type;
-}
+G_DEFINE_BOXED_TYPE (gnc_numeric, gnc_numeric, gnc_numeric_boxed_copy_func, gnc_numeric_boxed_free_func)
 
 /* *******************************************************************
  *  gnc_numeric misc testing

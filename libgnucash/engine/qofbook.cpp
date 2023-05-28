@@ -59,8 +59,6 @@
 #include "qofbook.hpp"
 
 static QofLogModule log_module = QOF_MOD_ENGINE;
-#define AB_KEY "hbci"
-#define AB_TEMPLATES "template-list"
 
 enum
 {
@@ -72,7 +70,6 @@ enum
     PROP_OPT_NUM_FIELD_SOURCE,              /* KVP */
     PROP_OPT_DEFAULT_BUDGET,                /* KVP */
     PROP_OPT_FY_END,                        /* KVP */
-    PROP_AB_TEMPLATES,                      /* KVP */
 };
 
 static void
@@ -180,9 +177,6 @@ qof_book_get_property (GObject* object,
     case PROP_OPT_FY_END:
         qof_instance_get_path_kvp (QOF_INSTANCE (book), value, {"fy_end"});
         break;
-    case PROP_AB_TEMPLATES:
-          qof_instance_get_path_kvp (QOF_INSTANCE (book), value, {"AB_KEY", "AB_TEMPLATES"});
-        break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
         break;
@@ -221,9 +215,6 @@ qof_book_set_property (GObject      *object,
         break;
     case PROP_OPT_FY_END:
         qof_instance_set_path_kvp (QOF_INSTANCE (book), value, {"fy_end"});
-        break;
-    case PROP_AB_TEMPLATES:
-        qof_instance_set_path_kvp (QOF_INSTANCE (book), value, {AB_KEY, AB_TEMPLATES});
         break;
     default:
         G_OBJECT_WARN_INVALID_PROPERTY_ID(object, prop_id, pspec);
@@ -289,14 +280,6 @@ qof_book_class_init (QofBookClass *klass)
                         "A GDate with a bogus year having the last Month and "
                         "Day of the Fiscal year for the book.",
                         G_TYPE_DATE,
-                        G_PARAM_READWRITE));
-    g_object_class_install_property
-    (gobject_class,
-     PROP_AB_TEMPLATES,
-     g_param_spec_boxed("ab-templates",
-                        "AQBanking Template List",
-                        "A GList of AQBanking Templates",
-                        GNC_TYPE_VALUE_LIST,
                         G_PARAM_READWRITE));
 }
 
@@ -608,8 +591,13 @@ qof_book_get_counter (QofBook *book, const char *counter_name)
     value = kvp->get_slot({"counters", counter_name});
     if (value)
     {
-        /* found it */
-        return value->get<int64_t>();
+        auto int_value{value->get<int64_t>()};
+        /* Might be a double because of
+         * https://bugs.gnucash.org/show_bug.cgi?id=798930
+         */
+        if (!int_value)
+            int_value = static_cast<int64_t>(value->get<double>());
+        return int_value;
     }
     else
     {
@@ -1267,14 +1255,14 @@ qof_book_set_feature (QofBook *book, const gchar *key, const gchar *descr)
     }
 }
 
-std::vector<std::string>
+FeatureSet
 qof_book_get_unknown_features (QofBook *book, const FeaturesTable& features)
 {
-    std::vector<std::string> rv;
+    FeatureSet rv;
     auto test_feature = [&](const KvpFrameImpl::map_type::value_type& feature)
     {
         if (features.find (feature.first) == features.end ())
-            rv.push_back (feature.second->get<const char*>());
+            rv.emplace_back (feature.first, feature.second->get<const char*>());
     };
     auto frame = qof_instance_get_slots (QOF_INSTANCE (book));
     auto slot = frame->get_slot({GNC_FEATURES});

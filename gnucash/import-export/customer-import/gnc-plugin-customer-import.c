@@ -28,8 +28,6 @@
 
 #include <config.h>
 
-//#include <glade/glade.h>
-//#include <glade/glade-xml.h>
 #include <glib/gi18n.h>
 
 #include "dialog-utils.h"
@@ -41,8 +39,6 @@
 /* This static indicates the debugging module that this .o belongs to.  */
 static QofLogModule log_module = G_LOG_DOMAIN;
 
-static void gnc_plugin_customer_import_class_init         (GncPlugincustomer_importClass *klass);
-static void gnc_plugin_customer_import_init               (GncPlugincustomer_import *plugin);
 static void gnc_plugin_customer_import_finalize           (GObject *object);
 
 /* Command callbacks */

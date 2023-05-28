@@ -337,7 +337,7 @@ GncSqlBackend::load (QofBook* book, QofBackendLoadType loadType)
                   });
     m_postload_commodities.clear();
 
-    /* Mark the sessoion as clean -- though it should never be marked
+    /* Mark the session as clean -- though it should never be marked
      * dirty with this backend
      */
     qof_book_mark_session_saved (book);
@@ -454,8 +454,6 @@ GncSqlBackend::write_schedXactions()
 
     return is_ok;
 }
-
-#pragma GCC diagnostic warning "-Wformat-nonliteral"
 
 void
 GncSqlBackend::sync(QofBook* book)

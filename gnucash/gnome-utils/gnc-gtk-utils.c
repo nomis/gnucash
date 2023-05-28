@@ -367,17 +367,22 @@ accel_map_foreach_func (gpointer user_data, const gchar* accel_path, guint accel
     GMenuModel *menu_model = user_data;
     gchar **accel_path_parts = NULL;
     guint  accel_size = 0;
+    gchar *target = NULL;
     gchar *accel_name_tmp = gtk_accelerator_name (accel_key, accel_mods);
     gchar *accel_name = g_strescape (accel_name_tmp, NULL);
 
     accel_path_parts = g_strsplit (accel_path, "/", -1);
     accel_size = g_strv_length (accel_path_parts);
 
-    if (accel_size == 3)
+    if (accel_size == 4)
+        target = g_strdup (accel_path_parts[3]);
+
+    if (accel_size >=3)
         gnc_menubar_model_update_item (menu_model, accel_path_parts[2],
-                                       NULL, accel_name, NULL);
+                                       target, NULL, accel_name, NULL);
 
     g_strfreev (accel_path_parts);
+    g_free (target);
     g_free (accel_name_tmp);
     g_free (accel_name);
 }
@@ -633,6 +638,8 @@ extract_items_from_model (GMenuModel *model,
     const gchar *action = NULL;
     const gchar *label = NULL;
     const gchar *tooltip = NULL;
+    const gchar *target_char = NULL;
+    gint         target_int = -1;
 
     iter = g_menu_model_iterate_item_attributes (model, item);
     while (g_menu_attribute_iter_get_next (iter, &key, &value))
@@ -646,8 +653,30 @@ extract_items_from_model (GMenuModel *model,
         else if (g_str_equal (key, G_MENU_ATTRIBUTE_ACTION) &&
                  g_variant_is_of_type (value, G_VARIANT_TYPE_STRING))
             action = g_variant_get_string (value, NULL);
-
+        else if (g_str_equal (key, G_MENU_ATTRIBUTE_TARGET) &&
+                 g_variant_is_of_type (value, G_VARIANT_TYPE_STRING))
+            target_char = g_variant_get_string (value, NULL);
+        else if (g_str_equal (key, G_MENU_ATTRIBUTE_TARGET) &&
+                 g_variant_is_of_type (value, G_VARIANT_TYPE_INT32))
+            target_int = g_variant_get_int32 (value);
         g_variant_unref (value);
+    }
+
+    if (gsm->search_action_target)
+    {
+        gboolean target_test = FALSE;
+
+        if (target_int != -1 && target_int == atoi (gsm->search_action_target))
+            target_test = TRUE;
+
+        if (target_char && g_strcmp0 (target_char, gsm->search_action_target) == 0)
+            target_test = TRUE;
+
+        if (!target_test)
+        {
+            g_object_unref (iter);
+            return;
+        }
     }
 
     if (action && gsm->search_action_name)
@@ -759,6 +788,7 @@ gnc_menubar_model_find_menu_item (GMenuModel *menu_model, GtkWidget *menu, const
 
     gsm->search_action_label = NULL;
     gsm->search_action_name = action_name;
+    gsm->search_action_target = NULL;
 
     if (gnc_menubar_model_find_item (menu_model, gsm))
         menu_item = gnc_find_menu_item_by_action_label (menu, gsm->search_action_label);
@@ -774,6 +804,8 @@ gnc_menubar_model_find_menu_item (GMenuModel *menu_model, GtkWidget *menu, const
  *  @param menu_model The GMenuModel of the menu.
  *
  *  @param action_name The action name to update.
+ * 
+ *  @param target The action target if required, else NULL.
  *
  *  @param label The new menu label text.
  *
@@ -785,8 +817,8 @@ gnc_menubar_model_find_menu_item (GMenuModel *menu_model, GtkWidget *menu, const
  */
 gboolean
 gnc_menubar_model_update_item (GMenuModel *menu_model, const gchar *action_name,
-                               const gchar *label, const gchar *accel_name,
-                               const gchar *tooltip)
+                               const gchar *target, const gchar *label,
+                               const gchar *accel_name, const gchar *tooltip)
 {
     GncMenuModelSearch *gsm;
     gboolean found = FALSE;
@@ -798,6 +830,7 @@ gnc_menubar_model_update_item (GMenuModel *menu_model, const gchar *action_name,
 
     gsm->search_action_label = NULL;
     gsm->search_action_name = action_name;
+    gsm->search_action_target = target;
 
     if (gnc_menubar_model_find_item (menu_model, gsm))
     {

@@ -37,11 +37,13 @@
 #include "gnc-file.h"
 #include "gnc-features.h"
 #include "gnc-filepath-utils.h"
+#include "gnc-glib-utils.h"
 #include "gnc-gui-query.h"
 #include "gnc-hooks.h"
 #include "gnc-keyring.h"
 #include "gnc-splash.h"
 #include "gnc-ui.h"
+#include "gnc-ui-balances.h"
 #include "gnc-ui-util.h"
 #include "gnc-uri-utils.h"
 #include "gnc-window.h"
@@ -706,6 +708,20 @@ gnc_file_query_save (GtkWindow *parent, gboolean can_cancel)
 }
 
 
+
+static char*
+get_account_sep_warning (QofBook *book)
+{
+    const char *sep = gnc_get_account_separator_string ();
+    GList *violation_accts = gnc_account_list_name_violations (book, sep);
+    if (!violation_accts)
+        return NULL;
+
+    gchar *rv = gnc_account_name_violations_errmsg (sep, violation_accts);
+    g_list_free_full (violation_accts, g_free);
+    return rv;
+}
+
 /* private utilities for file open; done in two stages */
 
 #define RESPONSE_NEW 1
@@ -719,29 +735,49 @@ gnc_file_query_save (GtkWindow *parent, gboolean can_cancel)
 static void
 run_post_load_scrubs (GtkWindow *parent, QofBook *book)
 {
+    const char *budget_warning =
+        _("This book has budgets. The internal representation of "
+          "budget amounts no longer depends on the Reverse Balanced "
+          "Accounts preference. Please review the budgets and amend "
+          "signs if necessary.");
+
+    GList *infos = NULL;
+
     qof_event_suspend();
 
     /* If feature GNC_FEATURE_BUDGET_UNREVERSED is not set, and there
        are budgets, fix signs */
     if (gnc_maybe_scrub_all_budget_signs (book))
-        gnc_info_dialog (parent, "%s", _(
-                             "This book has budgets. The internal representation of "
-                             "budget amounts no longer depends on the Reverse Balanced "
-                             "Accounts preference. Please review the budgets and amend "
-                             "signs if necessary."));
+        infos = g_list_prepend (infos, g_strdup (budget_warning));
 
     // Fix account color slots being set to 'Not Set', should run once on a book
     xaccAccountScrubColorNotSet (book);
 
+    /* Check for account names that may contain the current separator character
+     * and inform the user if there are any */
+    char *sep_warning = get_account_sep_warning (book);
+    if (sep_warning)
+        infos = g_list_prepend (infos, sep_warning);
+
     qof_event_resume();
+
+    if (!infos)
+        return;
+
+    const char *header = N_("The following are noted in this file:");
+    infos = g_list_reverse (infos);
+    infos = g_list_prepend (infos, g_strdup (_(header)));
+    char *final = gnc_g_list_stringjoin (infos, "\n\n• ");
+    gnc_info_dialog (parent, "%s", final);
+
+    g_free (final);
+    g_list_free_full (infos, g_free);
 }
 
 static gboolean
 gnc_post_file_open (GtkWindow *parent, const char * filename, gboolean is_readonly)
 {
     QofSession *new_session;
-    QofBook *new_book;
-    GList *invalid_account_names;
     gboolean uh_oh = FALSE;
     char * newfile;
     QofBackendError io_err = ERR_BACKEND_NO_ERR;
@@ -1127,21 +1163,7 @@ RESTART:
     /* Call this after re-enabling events. */
     gnc_book_opened ();
 
-    /* Check for account names that may contain the current separator character
-     * and inform the user if there are any */
-    new_book = gnc_get_current_book();
-    invalid_account_names = gnc_account_list_name_violations ( new_book,
-                            gnc_get_account_separator_string() );
-    if ( invalid_account_names )
-    {
-        gchar *message = gnc_account_name_violations_errmsg ( gnc_get_account_separator_string(),
-                         invalid_account_names );
-        gnc_warning_dialog(parent, "%s", message);
-        g_free ( message );
-        g_list_free_full (invalid_account_names, g_free);
-    }
-
-    run_post_load_scrubs (parent, new_book);
+    run_post_load_scrubs (parent, gnc_get_current_book ());
 
     gettimeofday(&tv_after, NULL);
     tv_duration.tv_sec = tv_after.tv_sec - tv_before.tv_sec;

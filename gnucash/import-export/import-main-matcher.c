@@ -385,16 +385,10 @@ get_conflict_list (GtkTreeModel* model, GtkTreeIter import_iter, GncGUID* id, gi
 }
 
 static void
-remove_top_matches (GNCImportMainMatcher* gui, GtkTreeModel* model, GList* conflicts)
+remove_top_matches (GList* conflicts)
 {
-    GList* iter = conflicts;
-    for (; iter && iter->data; iter=iter->next)
-    {
-        GNCImportTransInfo* trans_info = iter->data;
-        GList* match_trans = gnc_import_TransInfo_get_match_list (trans_info);
-        match_trans = g_list_remove (match_trans, match_trans->data);
-        gnc_import_TransInfo_set_match_list (trans_info, match_trans);
-    }
+    for (GList* iter = conflicts; iter && iter->data; iter=iter->next)
+        gnc_import_TransInfo_remove_top_match (iter->data);
 }
 
 static void
@@ -426,7 +420,7 @@ resolve_conflicts (GNCImportMainMatcher *info)
 
         if (conflicts)
         {
-            remove_top_matches (info, model, conflicts);
+            remove_top_matches (conflicts);
             /* Go back to the beginning here, because a nth choice
              * could now conflict with a previously assigned first choice. */
             valid = gtk_tree_model_get_iter_first (model, &import_iter);
@@ -514,6 +508,15 @@ gnc_gen_trans_list_show_all (GNCImportMainMatcher *info)
     gnc_gen_trans_list_show_accounts_column (info);
 }
 
+static void acc_begin_edit (GList **accounts_modified, Account *acc)
+{
+    if (!acc || !accounts_modified || g_list_find (*accounts_modified, acc))
+        return;
+
+    DEBUG ("xaccAccountBeginEdit for acc %s", xaccAccountGetName (acc));
+    xaccAccountBeginEdit (acc);
+    *accounts_modified = g_list_prepend (*accounts_modified, acc);
+}
 void
 on_matcher_ok_clicked (GtkButton *button, GNCImportMainMatcher *info)
 {
@@ -535,12 +538,19 @@ on_matcher_ok_clicked (GtkButton *button, GNCImportMainMatcher *info)
     gnc_suspend_gui_refresh ();
     bool first_tran = true;
     bool append_text = gtk_toggle_button_get_active ((GtkToggleButton*) info->append_text);
+    GList *accounts_modified = NULL;
     do
     {
         GNCImportTransInfo *trans_info;
         gtk_tree_model_get (model, &iter,
                             DOWNLOADED_COL_DATA, &trans_info,
                             -1);
+
+        Split* first_split = gnc_import_TransInfo_get_fsplit (trans_info);
+        Transaction *trans = xaccSplitGetParent (first_split);
+
+        for (GList *n = xaccTransGetSplitList (trans); n; n = g_list_next (n))
+            acc_begin_edit (&accounts_modified, xaccSplitGetAccount (n->data));
 
         // Allow the backend to know if the Append checkbox is ticked or unticked
         // by propagating info->append_text to every trans_info->append_text
@@ -552,12 +562,12 @@ on_matcher_ok_clicked (GtkButton *button, GNCImportMainMatcher *info)
         // Get the import account from the first split.
         if (first_tran)
         {
-            Split* first_split = gnc_import_TransInfo_get_fsplit (trans_info);
             xaccAccountSetAppendText (xaccSplitGetAccount(first_split), append_text);
             first_tran = false;
         }
-        // Note: if there's only 1 split (unbalanced) one will be created with the unbalanced account,
-        // and for that account the defer balance will not be set. So things will be slow.
+
+        Account *dest_acc = gnc_import_TransInfo_get_destacc (trans_info);
+        acc_begin_edit (&accounts_modified, dest_acc);
 
         if (gnc_import_process_trans_item (NULL, trans_info))
         {
@@ -576,6 +586,7 @@ on_matcher_ok_clicked (GtkButton *button, GNCImportMainMatcher *info)
     gnc_resume_gui_refresh ();
 
     /* DEBUG ("End") */
+    g_list_free_full (accounts_modified, (GDestroyNotify)xaccAccountCommitEdit);
 }
 
 void
@@ -925,17 +936,43 @@ match_func (GtkEntryCompletion *completion, const char *entry_str,
     return ret;
 }
 
-static void
-setup_entry (GtkWidget *entry, bool sensitive, GHashTable *hash,
-             const char *initial)
+typedef struct
 {
+    GtkWidget *entry;
+    GObject *override;
+    bool *can_edit;
+    GHashTable *hash;
+    const char *initial;
+} EntryInfo;
+
+static void override_clicked (GtkWidget *widget, EntryInfo *entryinfo)
+{
+    gtk_widget_set_visible (GTK_WIDGET (entryinfo->override), false);
+    gtk_widget_set_sensitive (entryinfo->entry, true);
+    gtk_entry_set_text (GTK_ENTRY (entryinfo->entry), "");
+    gtk_widget_grab_focus (entryinfo->entry);
+    *entryinfo->can_edit = true;
+}
+
+static void
+setup_entry (EntryInfo *entryinfo)
+{
+    bool sensitive = *entryinfo->can_edit;
+    GtkWidget *entry = entryinfo->entry;
+    GtkWidget *override = GTK_WIDGET (entryinfo->override);
+    GHashTable *hash = entryinfo->hash;
+    const char *initial = entryinfo->initial;
+
     gtk_widget_set_sensitive (entry, sensitive);
+    gtk_widget_set_visible (override, !sensitive);
+
     if (sensitive && initial && *initial)
         gtk_entry_set_text (GTK_ENTRY (entry), initial);
     else if (!sensitive)
     {
-        gtk_entry_set_text (GTK_ENTRY (entry), _("Disabled"));
-        return;
+        gtk_entry_set_text (GTK_ENTRY (entry), _("Click Edit to modify"));
+        g_signal_connect (override, "clicked", G_CALLBACK (override_clicked),
+                          entryinfo);
     }
 
     GtkListStore *list = gtk_list_store_new (NUM_COMPLETION_COLS, G_TYPE_STRING, G_TYPE_STRING, G_TYPE_STRING);
@@ -974,14 +1011,29 @@ input_new_fields (GNCImportMainMatcher *info, RowInfo *rowinfo,
 
     Transaction *trans = gnc_import_TransInfo_get_trans (rowinfo->trans_info);
     Split *split = gnc_import_TransInfo_get_fsplit (rowinfo->trans_info);
-    setup_entry (desc_entry, info->can_edit_desc, info->desc_hash, xaccTransGetDescription (trans));
-    setup_entry (notes_entry, info->can_edit_notes, info->notes_hash, xaccTransGetNotes (trans));
-    setup_entry (memo_entry, info->can_edit_memo, info->memo_hash, xaccSplitGetMemo (split));
+
+    EntryInfo entries[] = {
+        { desc_entry, gtk_builder_get_object (builder, "desc_override"), &info->can_edit_desc, info->desc_hash, xaccTransGetDescription (trans) },
+        { notes_entry, gtk_builder_get_object (builder, "notes_override"), &info->can_edit_notes, info->notes_hash, xaccTransGetNotes (trans) },
+        { memo_entry, gtk_builder_get_object (builder, "memo_override"), &info->can_edit_memo, info->memo_hash, xaccSplitGetMemo (split) },
+        { NULL } };
+
+    for (guint i = 0; entries[i].entry; i++)
+        setup_entry (&entries[i]);
+
+    /* ensure that an override button doesn't have focus. find the
+       first available entry and give it focus. */
+    for (guint i = 0; entries[i].entry; i++)
+        if (*entries[i].can_edit)
+        {
+            gtk_widget_grab_focus (entries[i].entry);
+            break;
+        }
 
     gtk_window_set_transient_for (GTK_WINDOW (dialog), GTK_WINDOW (info->main_widget));
 
     // run the dialog
-    gtk_widget_show_all (dialog);
+    gtk_widget_show (dialog);
 
     bool  retval = false;
     switch (gtk_dialog_run (GTK_DIALOG(dialog)))
@@ -2204,11 +2256,13 @@ void gnc_gen_trans_list_add_trans_with_split_data (GNCImportMainMatcher *gui,
     gnc_gen_trans_list_add_trans_internal (gui, trans, 0, lsplit);
 }
 
-/* Query the accounts used by the imported transactions to find a list of
- * candidate matching transactions.
+/* Return a list of splits from already existing transactions for
+ * which the account matches an account used by the transactions to
+ * import. The matching range is also date-limited (configurable
+ * via preferences) to not go too far in the past or future.
  */
 static GList*
-query_imported_transaction_accounts (GNCImportMainMatcher *gui)
+filter_existing_splits_on_account_and_date (GNCImportMainMatcher *gui)
 {
     static const int secs_per_day = 86400;
     gint match_date_limit =
@@ -2254,10 +2308,10 @@ query_imported_transaction_accounts (GNCImportMainMatcher *gui)
  * transactions based on their account and date and organized per account.
  */
 static GHashTable*
-create_hash_of_potential_matches (GList *candidate_txns,
+create_hash_of_potential_matches (GList *candidate_splits,
                                   GHashTable *account_hash)
 {
-    for (GList* candidate = candidate_txns; candidate != NULL;
+    for (GList* candidate = candidate_splits; candidate != NULL;
          candidate = g_list_next (candidate))
     {
         if (gnc_import_split_has_online_id (candidate->data))
@@ -2350,12 +2404,12 @@ gnc_gen_trans_list_create_matches (GNCImportMainMatcher *gui)
         g_hash_table_new_full (g_direct_hash, g_direct_equal, NULL,
                               (GDestroyNotify)g_slist_free);
     g_assert (gui);
-    GList *candidate_txns = query_imported_transaction_accounts (gui);
+    GList *candidate_splits = filter_existing_splits_on_account_and_date (gui);
 
-    create_hash_of_potential_matches (candidate_txns, account_hash);
+    create_hash_of_potential_matches (candidate_splits, account_hash);
     perform_matching (gui, account_hash);
 
-    g_list_free (candidate_txns);
+    g_list_free (candidate_splits);
     g_hash_table_destroy (account_hash);
     return;
 }

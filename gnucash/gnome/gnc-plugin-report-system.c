@@ -37,8 +37,6 @@
 #include "gnc-engine.h"
 #include "window-report.h"
 
-static void gnc_plugin_report_system_class_init (GncPluginReportSystemClass *klass);
-static void gnc_plugin_report_system_init (GncPluginReportSystem *plugin);
 static void gnc_plugin_report_system_finalize (GObject *object);
 
 
@@ -73,8 +71,6 @@ G_DEFINE_TYPE_WITH_PRIVATE(GncPluginReportSystem, gnc_plugin_report_system, GNC_
 #define GNC_PLUGIN_REPORT_SYSTEM_GET_PRIVATE(o)  \
    (G_TYPE_INSTANCE_GET_PRIVATE ((o), GNC_TYPE_PLUGIN_REPORT_SYSTEM, GncPluginReportSystemPrivate))
 
-static GObjectClass *parent_class = NULL;
-
 /************************************************************
  *                   Object Implementation                  *
  ************************************************************/
@@ -84,8 +80,6 @@ gnc_plugin_report_system_class_init (GncPluginReportSystemClass *klass)
 {
     GObjectClass *object_class = G_OBJECT_CLASS (klass);
     GncPluginClass *plugin_class = GNC_PLUGIN_CLASS (klass);
-
-    parent_class = g_type_class_peek_parent (klass);
 
     object_class->finalize = gnc_plugin_report_system_finalize;
 
@@ -110,7 +104,7 @@ gnc_plugin_report_system_finalize (GObject *object)
 {
     g_return_if_fail (GNC_IS_PLUGIN_REPORT_SYSTEM (object));
 
-    G_OBJECT_CLASS (parent_class)->finalize (object);
+    G_OBJECT_CLASS (gnc_plugin_report_system_parent_class)->finalize (object);
 }
 
 /************************************************************
@@ -137,6 +131,25 @@ gnc_report_system_file_stream_cb (const char *location, char ** data, int *len)
     return (*len > 0);
 }
 
+static char *
+html_sanitize (const char *str)
+{
+    g_return_val_if_fail (str, NULL);
+    GString *gs = g_string_sized_new (strlen (str));
+    for (const char *c = str; *c; c++)
+    {
+        if (*c == '&')
+            gs = g_string_append (gs, "&amp;");
+        else if (*c == '<')
+            gs = g_string_append (gs, "&lt;");
+        else if (*c == '>')
+            gs = g_string_append (gs, "&gt;");
+        else
+            gs = g_string_append_c (gs, *c);
+    }
+    return g_string_free (gs, FALSE);
+}
+
 static gboolean
 gnc_report_system_report_stream_cb (const char *location, char ** data, int *len)
 {
@@ -147,12 +160,14 @@ gnc_report_system_report_stream_cb (const char *location, char ** data, int *len
 
     if (!ok)
     {
+        char *sanitized = html_sanitize (captured_str);
         *data = g_strdup_printf ("<html><body><h3>%s</h3>"
                                  "<p>%s</p><pre>%s</pre></body></html>",
                                  _("Report error"),
                                  _("An error occurred while running the report."),
-                                 captured_str);
+                                 sanitized);
 
+        g_free (sanitized);
         g_free(captured_str);
 
         /* Make sure the progress bar is finished, which will also

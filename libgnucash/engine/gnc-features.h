@@ -36,9 +36,15 @@
 #ifndef GNC_FEATURES_H
 #define GNC_FEATURES_H
 
-#include "qof.h"
-
 #ifdef __cplusplus
+#include <string_view>
+#include <unordered_map>
+#include <vector>
+
+using Feature = std::pair<std::string_view, std::string_view>;
+using FeaturesTable = std::unordered_map<std::string_view, std::string_view>;
+using FeatureSet = std::vector<Feature>;
+
 extern "C" {
 #endif
 
@@ -48,6 +54,7 @@ extern "C" {
 #define GNC_FEATURE_CREDIT_NOTES "Credit Notes"
 #define GNC_FEATURE_NUM_FIELD_SOURCE "Number Field Source"
 #define GNC_FEATURE_KVP_EXTRA_DATA "Extra data in addresses, jobs or invoice entries"
+#define GNC_FEATURE_BOOK_CURRENCY "Use a Book-Currency"
 #define GNC_FEATURE_GUID_BAYESIAN "Account GUID based Bayesian data"
 #define GNC_FEATURE_GUID_FLAT_BAYESIAN "Account GUID based bayesian with flat KVP"
 #define GNC_FEATURE_SQLITE3_ISO_DATES "ISO-8601 formatted date strings in SQLite3 databases."

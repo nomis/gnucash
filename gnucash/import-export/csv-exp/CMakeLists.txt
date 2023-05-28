@@ -1,8 +1,12 @@
+
+add_subdirectory(test)
+
 set(csv_export_SOURCES
   gnc-plugin-csv-export.c
+  csv-export-helpers.cpp
   assistant-csv-export.c
-  csv-tree-export.c
-  csv-transactions-export.c
+  csv-tree-export.cpp
+  csv-transactions-export.cpp
 )
 
 # Add dependency on config.h
@@ -11,6 +15,7 @@ set_source_files_properties (${csv_export_SOURCES} PROPERTIES OBJECT_DEPENDS ${C
 set(csv_export_noinst_HEADERS
   gnc-plugin-csv-export.h
   assistant-csv-export.h
+  csv-export-helpers.hpp
   csv-tree-export.h
   csv-transactions-export.h
 )
@@ -44,5 +49,14 @@ install(TARGETS gnc-csv-export
   RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 # No headers to install.
 
-set_dist_list (csv_export_DIST CMakeLists.txt
-        ${csv_export_SOURCES} ${csv_export_noinst_HEADERS})
+set_local_dist (csv_export_DIST_local
+  CMakeLists.txt
+  ${csv_export_SOURCES}
+  ${csv_export_noinst_HEADERS}
+)
+
+set (csv_export_DIST
+  ${csv_export_DIST_local}
+  ${test_csv_export_DIST}
+  PARENT_SCOPE
+)

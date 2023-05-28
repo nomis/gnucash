@@ -413,23 +413,25 @@ scm_to_value<gnc_commodity*>(SCM new_value)
     if (scm_is_list(new_value))
     {
         auto len{scm_to_uint(scm_length(new_value))};
-        std::string mnemonic{scm_to_utf8_string(scm_list_ref(new_value,
-                                                         scm_from_uint(0)))};
-        std::string name_space{"CURRENCY"};
-        if (len > 1)
-           name_space = scm_to_utf8_string(scm_list_ref(new_value,
-                                                        scm_from_uint(1)));
+        auto mnemonic{scm_to_utf8_string(scm_list_ref(new_value, scm_from_uint(0)))};
+        auto name_space{(len > 1) ? scm_to_utf8_string(scm_list_ref(new_value,
+                                                                    scm_from_uint(1)))
+                : strdup ("CURRENCY")};
         auto book{get_current_book()};
         auto table = gnc_commodity_table_get_table(book);
-        return gnc_commodity_table_lookup(table, name_space.c_str(),
-                                          mnemonic.c_str());
+        auto rv = gnc_commodity_table_lookup (table, name_space, mnemonic);
+        free (name_space);
+        free (mnemonic);
+        return rv;
     }
     if (scm_is_string(new_value))
     {
         auto book{get_current_book()};
         auto table = gnc_commodity_table_get_table(book);
-        std::string mnemonic{scm_to_utf8_string(new_value)};
-        return gnc_commodity_table_lookup(table, "CURRENCY", mnemonic.c_str());
+        auto mnemonic{scm_to_utf8_string(new_value)};
+        auto rv = gnc_commodity_table_lookup(table, "CURRENCY", mnemonic);
+        free (mnemonic);
+        return rv;
     }
     return nullptr;
 }
@@ -466,7 +468,11 @@ scm_to_value<GncOptionAccountList>(SCM new_value)
     GncOptionAccountList retval{};
     if (scm_is_false(scm_list_p(new_value)) || scm_is_null(new_value))
         return retval;
+
+    retval.reserve(scm_to_size_t(scm_length(new_value)));
+
     auto next{new_value};
+    auto from_report{true};
     while (!scm_is_null(next) && scm_car(next))
     {
 /* If the incoming scheme is from a report then it will contain an Account*, if
@@ -475,9 +481,11 @@ scm_to_value<GncOptionAccountList>(SCM new_value)
         if (scm_is_string(scm_car(next)))
         {
             auto guid_str{scm_to_utf8_string(scm_car(next))};
+            from_report = false;
             GncGUID guid;
             string_to_guid(guid_str, &guid);
             retval.push_back(guid);
+            free (guid_str);
         }
         else
         {
@@ -491,6 +499,9 @@ scm_to_value<GncOptionAccountList>(SCM new_value)
         }
         next = scm_cdr(next);
     }
+
+    if (!from_report)
+        std::reverse(retval.begin(), retval.end());
     return retval;
 }
 
@@ -627,9 +638,11 @@ gnc_option_test_book_destroy(QofBook* book)
         }
         else
             throw std::invalid_argument("Unsupported key type in multichoice option.");
-        std::string key{scm_to_utf8_string(keyval)};
-        std::string name{scm_to_utf8_string(SCM_SIMPLE_VECTOR_REF(vec, 1))};
-        choices.push_back({std::move(key), std::move(name), keytype});
+        auto key{scm_to_utf8_string(keyval)};
+        auto name{scm_to_utf8_string(SCM_SIMPLE_VECTOR_REF(vec, 1))};
+        choices.push_back({key, name, keytype});
+        free (name);
+        free (key);
     }
     $1 = &choices;
  }
@@ -920,12 +933,15 @@ wrap_unique_ptr(GncOptionDBPtr, GncOptionDB);
             if (scm_is_symbol(scm_car(date)))
             {
                 auto car{scm_to_utf8_string(scm_symbol_to_string(scm_car(date)))};
+                bool rv = false;
                 if (strcmp(car, "relative") == 0)
-                    return false;
-                if (strcmp(car, "absolute") == 0)
-                    return true;
-
-                assert(false);
+                    rv = false;
+                else if (strcmp(car, "absolute") == 0)
+                    rv = true;
+                else
+                    assert(false);
+                free (car);
+                return rv;
             }
             else
             {
@@ -977,15 +993,15 @@ wrap_unique_ptr(GncOptionDBPtr, GncOptionDB);
                         const GncOptionMultichoiceValue& option)
     {
         static const auto uint16_t_max = std::numeric_limits<uint16_t>::max();
-        static const char* empty{""};
-        auto scm_to_str = [](auto item)->const char* {
+        auto scm_to_str = [](auto item)->char* {
+                static const char* empty{""};
                 if (scm_is_integer(item))
                     item = scm_number_to_string(item, scm_from_uint(10u));
                 else if (scm_is_symbol(item))
                     item = scm_symbol_to_string(item);
                 if (scm_is_string(item))
                     return scm_to_utf8_string(item);
-                return empty;
+                return strdup(empty);
             };
         GncMultichoiceOptionIndexVec vec;
         auto choice_is_list{option.get_ui_type() == GncOptionUIType::LIST}; 
@@ -997,14 +1013,18 @@ wrap_unique_ptr(GncOptionDBPtr, GncOptionDB);
             for (std::size_t i = 0; i < len; ++i)
             {
                 auto item{scm_list_ref(new_value, scm_from_size_t(i))};
-                auto index{option.permissible_value_index(scm_to_str(item))};
+                auto item_str{scm_to_str(item)};
+                auto index{option.permissible_value_index(item_str)};
+                free (item_str);
                 if (index < uint16_t_max)
                     vec.push_back(index);
             }
         }
         else
         {
-            auto index{option.permissible_value_index(scm_to_str(new_value))};
+            auto newval_str{scm_to_str(new_value)};
+            auto index{option.permissible_value_index(newval_str)};
+            free (newval_str);
             if (index < uint16_t_max)
                 vec.push_back(index);
         }
@@ -1192,9 +1212,9 @@ inline SCM return_scm_value(ValueType value)
 
     SCM save_scm_value()
     {
-        static const SCM plain_format_str{scm_from_utf8_string("~s")};
-        static const SCM ticked_format_str{scm_from_utf8_string("'~a")};
-        static const SCM list_format_str{scm_from_utf8_string("'~s")};
+        [[maybe_unused]] static const SCM plain_format_str{scm_from_utf8_string("~s")};
+        [[maybe_unused]] static const SCM ticked_format_str{scm_from_utf8_string("'~a")};
+        [[maybe_unused]] static const SCM list_format_str{scm_from_utf8_string("'~s")};
 //scm_simple_format needs a scheme list of arguments to match the format
 //placeholders.
         return std::visit([$self] (auto &option) -> SCM {
@@ -1388,6 +1408,7 @@ inline SCM return_scm_value(ValueType value)
                             {
                                  auto strval{scm_to_utf8_string(new_value)};
                                  option.deserialize(strval);
+                                 free (strval);
                                  return;
                             }
                             option.set_value(scm_to_value<gnc_commodity*>(new_value));
@@ -1397,13 +1418,18 @@ inline SCM return_scm_value(ValueType value)
                         if (len > 1)
                         {
                             auto revlist{scm_reverse(new_value)};
-                            std::string name_space{scm_to_utf8_string(scm_cadr(revlist))};
-                            std::string mnemonic{scm_to_utf8_string(scm_car(revlist))};
-                            option.deserialize(name_space + ":" + mnemonic);
+                            auto name_space{scm_to_utf8_string(scm_cadr(revlist))};
+                            auto mnemonic{scm_to_utf8_string(scm_car(revlist))};
+                            option.deserialize(std::string (name_space) + ":" +
+                                               std::string (mnemonic));
+                            free (mnemonic);
+                            free (name_space);
                         }
                         else
                         {
-                            option.deserialize(scm_to_utf8_string(scm_car(new_value)));
+                            auto newval_str{scm_to_utf8_string(scm_car(new_value))};
+                            option.deserialize(newval_str);
+                            free (newval_str);
                         }
                         return;
                     }
@@ -1414,6 +1440,7 @@ inline SCM return_scm_value(ValueType value)
                             auto strval{scm_to_utf8_string(new_value)};
                             auto val{qof_instance_from_string(strval, option.get_ui_type())};
                             option.set_value(val);
+                            free (strval);
                         }
                         else
                         {
@@ -1431,6 +1458,7 @@ inline SCM return_scm_value(ValueType value)
                             auto strval{scm_to_utf8_string(scm_cdr(new_value))};
                             owner.owner.undefined = qof_instance_from_string(strval, option.get_ui_type());
                             option.set_value(&owner);
+                            free (strval);
                         }
                         else
                         {
@@ -1460,10 +1488,11 @@ inline SCM return_scm_value(ValueType value)
                         if (scm_is_string(new_value))
                         {
                             auto strval{scm_to_utf8_string(new_value)};
-                            GncGUID guid;
+                            GncGUID guid{};
                             string_to_guid(strval, &guid);
                             auto book{get_current_book()};
                             option.set_value(xaccAccountLookup(&guid, book));
+                            free (strval);
                         }
                         else
                         {
@@ -1528,6 +1557,7 @@ inline SCM return_scm_value(ValueType value)
                             auto strval{scm_to_utf8_string(new_value)};
                             auto val{qof_instance_from_string(strval, option.get_ui_type())};
                             option.set_default_value(val);
+                            free (strval);
                         }
                         else
                         {
@@ -1545,6 +1575,7 @@ inline SCM return_scm_value(ValueType value)
                             auto strval{scm_to_utf8_string(scm_cdr(new_value))};
                             owner.owner.undefined = qof_instance_from_string(strval, option.get_ui_type());
                             option.set_default_value(&owner);
+                            free (strval);
                         }
                         else
                         {
@@ -1573,10 +1604,11 @@ inline SCM return_scm_value(ValueType value)
                         if (scm_is_string(new_value))
                         {
                             auto strval{scm_to_utf8_string(new_value)};
-                            GncGUID guid;
+                            GncGUID guid{};
                             string_to_guid(strval, &guid);
                             auto book{get_current_book()};
                             option.set_default_value(xaccAccountLookup(&guid, book));
+                            free (strval);
                         }
                         else
                         {
@@ -2097,7 +2129,7 @@ gnc_register_multichoice_callback_option(GncOptionDBPtr& db,
             });
     }
 
-    /** Tailred for gnc:generate-restore-forms.
+    /** Tailored for gnc:generate-restore-forms.
      * @param section_op A function to be called on each section name
      * @param option_op a function to be called on each option
      */

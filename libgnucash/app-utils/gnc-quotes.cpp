@@ -21,6 +21,7 @@
 \ *******************************************************************/
 
 #include <config.h>
+#include <qoflog.h>
 
 #include <algorithm>
 #include <stdexcept>
@@ -122,7 +123,7 @@ private:
 class GncFQQuoteSource final : public GncQuoteSource
 {
     const bfs::path c_cmd;
-    const std::string c_fq_wrapper;
+    std::string c_fq_wrapper;
     std::string m_version;
     StrVec m_sources;
     std::string m_api_key;
@@ -145,11 +146,12 @@ static const std::string empty_string{};
 
 GncFQQuoteSource::GncFQQuoteSource() :
 c_cmd{bp::search_path("perl")},
-c_fq_wrapper{std::string(gnc_path_get_bindir()) + "/finance-quote-wrapper"},
 m_version{}, m_sources{}, m_api_key{}
 {
+    char *bindir = gnc_path_get_bindir();
+    c_fq_wrapper = std::string(bindir) + "/finance-quote-wrapper";
+    g_free(bindir);
     StrVec args{"-w", c_fq_wrapper, "-v"};
-    const std::string empty_string;
     auto [rv, sources, errors] = run_cmd(args, empty_string);
     if (rv)
     {
@@ -237,8 +239,13 @@ GncFQQuoteSource::run_cmd (const StrVec& args, const std::string& json_string) c
             std::istream is(&sb);
 
             while (std::getline(is, line) && !line.empty())
+	    {
+#ifdef __WIN32
+		if (line.back() == '\r')
+		    line.pop_back();
+#endif
                 out_vec.push_back (std::move(line));
-
+	    }
             raw = err_buf.get();
             bio::stream_buffer<bio::array_source> eb(raw.data(), raw.size());
             std::istream es(&eb);
@@ -404,11 +411,21 @@ GncQuotesImpl::report_failures() noexcept
 
 /* **** Private function implementations ****/
 
+using Path = bpt::ptree::path_type;
+static inline Path make_quote_path(const std::string &name_space,
+                                   const std::string &symbol)
+{
+  using Path = bpt::ptree::path_type;
+  Path key{name_space, '|'};
+  key /= Path{symbol, '|'};
+  return key;
+};
+
 std::string
-GncQuotesImpl::comm_vec_to_json_string (const CommVec& comm_vec) const
+GncQuotesImpl::comm_vec_to_json_string(const CommVec &comm_vec) const
 {
     bpt::ptree pt, pt_child;
-    pt.put ("defaultcurrency", gnc_commodity_get_mnemonic (m_dflt_curr));
+    pt.put("defaultcurrency", gnc_commodity_get_mnemonic(m_dflt_curr));
 
     std::for_each (comm_vec.cbegin(), comm_vec.cend(),
                    [this, &pt] (auto comm)
@@ -418,14 +435,13 @@ GncQuotesImpl::comm_vec_to_json_string (const CommVec& comm_vec) const
                        if (gnc_commodity_is_currency (comm))
                        {
                            if (gnc_commodity_equiv(comm, m_dflt_curr) ||
-                               (!comm_mnemonic || (strcmp (comm_mnemonic, "XXX") == 0)))
+                               (!comm_mnemonic || (strcmp(comm_mnemonic, "XXX") == 0)))
                                return;
                        }
                        else
-                           comm_ns = gnc_quote_source_get_internal_name (gnc_commodity_get_quote_source (comm));
+                           comm_ns = gnc_quote_source_get_internal_name(gnc_commodity_get_quote_source(comm));
 
-                       auto key = comm_ns + "." + comm_mnemonic;
-                       pt.put (key, "");
+                       pt.put (make_quote_path(comm_ns, comm_mnemonic), "");
                    }
     );
 
@@ -479,12 +495,12 @@ GncQuotesImpl::query_fq (const char* source, const StrVec& commodities)
                   commodities.cend(),
                   [source, &pt](auto sym)
                       {
-                          std::string key{source};
-                          key += "." + sym;
-                          pt.put(key, "");
+                          pt.put(make_quote_path(source, sym), "");
                       });
     std::ostringstream result;
     bpt::write_json(result, pt);
+    auto result_str{result.str()};
+    PINFO("Query JSON: %s\n", result_str.c_str());
     return get_quotes(result.str(), m_quotesource);
 }
 
@@ -492,6 +508,7 @@ std::string
 GncQuotesImpl::query_fq (const CommVec& comm_vec)
 {
     auto json_str{comm_vec_to_json_string(comm_vec)};
+    PINFO("Query JSON: %s\n", json_str.c_str());
     return get_quotes(json_str, m_quotesource);
 }
 
@@ -552,7 +569,7 @@ parse_quote_json(PriceParams& p, const bpt::ptree& comm_pt)
     PINFO("     Time: %s", (p.time ? p.time->c_str() : "missing"));
     PINFO(" Currency: %s", (p.currency ? p.currency->c_str() : "missing"));
     PINFO("    Price: %s", (p.price ? p.price->c_str() : "missing"));
-    PINFO(" Inverted: %s\n", (inverted ? "yes" : "no"));
+    PINFO(" Inverted: %s\n", (p.inverted ? "yes" : "no"));
 }
 
 static time64

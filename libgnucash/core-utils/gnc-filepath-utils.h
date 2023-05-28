@@ -29,6 +29,8 @@
 #ifndef GNC_FILEPATH_UTILS_H
 #define GNC_FILEPATH_UTILS_H
 
+#include <glib.h>
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -176,26 +178,44 @@ gchar *gnc_filepath_locate_ui_file (const gchar *name);
  */
 gchar *gnc_filepath_locate_doc_file (const gchar *name);
 
-typedef struct
+gboolean gnc_filename_is_backup (const char *filename);
+
+gboolean gnc_filename_is_datafile (const char *filename);
+
+#ifdef __cplusplus
+} //extern "C"
+
+#include <fstream>
+
+/** Open std::ofstream from a UTF-8 encoded path. This is harder than
+ * it should because std::ofstream's constructor needs to be tricked
+ * into taking a wchar_t filename: Simply converting path to a
+ * wchar_t* with g_utf8_to_utf16() wouldn't compile. The workaround
+ * came from https://github.com/boostorg/filesystem/issues/181. As
+ * noted there passing the boost path directly to
+ * boost::filesystem::fstream doesn't work either.
+ * @param path UTF-8 path to the file
+ * @return a std::ofstream on the stack.
+ */
+std::ofstream gnc_open_filestream(const char *path);
+
+#include <vector>
+
+struct EnvPaths
 {
     const gchar *env_name;
     const gchar *env_path;
     gboolean modifiable;
-} EnvPaths;
+};
 
 
-/** Returns a GList* of the environment variables used by GnuCash.
+/** Returns a vector of the environment variables used by GnuCash.
  *
- *  @return a GList* of EnvPaths structs, describing the environment
+ *  @return a vector of EnvPaths structs, describing the environment
  *  variables used by GnuCash.
- *
- *  @note It is the caller's responsibility to free the GList with
- *  g_list_free_full (paths, g_free)
  */
-GList *gnc_list_all_paths (void);
+std::vector<EnvPaths> gnc_list_all_paths ();
 
-#ifdef __cplusplus
-}
 #endif
 
 #endif /* GNC_FILEPATH_UTILS_H */

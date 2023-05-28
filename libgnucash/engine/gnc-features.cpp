@@ -22,11 +22,13 @@
 #include <unordered_map>
 #include <string>
 #include <numeric>
+#include <algorithm>
 
 #include <config.h>
 
 #include <glib.h>
 #include <glib/gi18n.h>
+#include "qofbook.h"
 #include "qofbook.hpp"
 
 #include "gnc-features.h"
@@ -43,6 +45,21 @@ static const FeaturesTable features_table
     { GNC_FEATURE_BUDGET_UNREVERSED, "Store budget amounts unreversed (i.e. natural) signs (requires at least Gnucash 3.8)"},
     { GNC_FEATURE_BUDGET_SHOW_EXTRA_ACCOUNT_COLS, "Show extra account columns in the Budget View (requires at least Gnucash 3.8)"},
     { GNC_FEATURE_EQUITY_TYPE_OPENING_BALANCE, GNC_FEATURE_EQUITY_TYPE_OPENING_BALANCE " (requires at least Gnucash 4.3)" },
+};
+
+/* To obsolete a feature leave the #define in gnc-features.h and move the
+ * feature from features_table to obsolete_features after removing all of the
+ * code that depends on the feature. The feature will be removed from the book's
+ * KVP, allowing the book to be opened with GnuCash versions that don't support
+ * the feature.
+ *
+ * Do this only if the book's data is restored to compatibility with older
+ * GnuCash versions lacking the feature. In general this can be used only in
+ * cases where a feature was created but never implemented in a way that affects
+ * the book's data.
+ */
+static const FeaturesTable obsolete_features{
+    {GNC_FEATURE_BOOK_CURRENCY, "User-specified book currency stored in KVP. Never implemented but some user managed to get it set anyway. (requires at least GnuCash 2.7.0)"},
 };
 
 /* This static indicates the debugging module that this .o belongs to.  */
@@ -65,10 +82,26 @@ header = N_("This Dataset contains features not supported "
 gchar *gnc_features_test_unknown (QofBook *book)
 {
     auto unknowns {qof_book_get_unknown_features (book, features_table)};
-    auto accum = [](const auto& a, const auto& b){ return a + "\n* " + b; };
-    return unknowns.empty() ? nullptr :
-        g_strdup (std::accumulate (unknowns.begin(), unknowns.end(),
-                                   std::string (_(header)), accum).c_str());
+    if (unknowns.empty())
+        return nullptr;
+
+    auto obsolete = std::remove_if(unknowns.begin(), unknowns.end(),
+                                   [](auto& unknown){
+                                       return obsolete_features.find(unknown.first) != obsolete_features.end();
+                                   });
+    while (obsolete != unknowns.end())
+    {
+        qof_book_unset_feature(book, obsolete->first.data());
+        obsolete = unknowns.erase(obsolete);
+    }
+
+    if (unknowns.empty())
+        return nullptr;
+
+    auto accum = [](const auto& a, const auto& b){ return a + "\n* " + b.second.data(); };
+    auto msg {std::accumulate (unknowns.begin(), unknowns.end(),
+                                   std::string (_(header)), accum)};
+    return g_strdup (msg.c_str());
 }
 
 void gnc_features_set_used (QofBook *book, const gchar *feature)
@@ -84,7 +117,7 @@ void gnc_features_set_used (QofBook *book, const gchar *feature)
         return;
     }
 
-    qof_book_set_feature (book, feature, iter->second.c_str());
+    qof_book_set_feature (book, feature, iter->second.data());
 }
 
 

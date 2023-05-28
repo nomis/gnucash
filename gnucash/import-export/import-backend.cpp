@@ -128,7 +128,7 @@ gnc_import_TransInfo_get_match_list (const GNCImportTransInfo *info)
     return info->match_list;
 }
 
-void
+static void
 gnc_import_TransInfo_set_match_list (GNCImportTransInfo *info, GList* match_list)
 {
     g_assert (info);
@@ -140,6 +140,14 @@ gnc_import_TransInfo_set_match_list (GNCImportTransInfo *info, GList* match_list
         info->selected_match_info.selected_match = nullptr;
         gnc_import_TransInfo_set_action (info, GNCImport_ADD);
     }
+}
+
+void
+gnc_import_TransInfo_remove_top_match (GNCImportTransInfo *info)
+{
+    GList* match_trans = gnc_import_TransInfo_get_match_list (info);
+    match_trans = g_list_remove (match_trans, static_cast<gpointer>(match_trans->data));
+    gnc_import_TransInfo_set_match_list (info, match_trans);
 }
 
 Transaction *
@@ -301,7 +309,11 @@ gnc_import_TransInfo_set_last_split_info (GNCImportTransInfo *info,
             info->lsplit_amount = lsplit->amount;
             info->lsplit_amount_selected_manually = true;
         }
-        info->dest_acc = lsplit->account;
+        /* Bayesian matching may have already set a candidate destination
+         * account. However if the csv data also provides one, the one from the
+         * csv data is preferred. */
+        if (lsplit->account)
+            info->dest_acc = lsplit->account;
         info->lsplit_rec_state = lsplit->rec_state;
         info->lsplit_rec_date = lsplit->rec_date;
     }

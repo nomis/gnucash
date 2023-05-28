@@ -32,6 +32,7 @@
 #include "gnucash-commands.hpp"
 #include "gnucash-core-app.hpp"
 
+#include <gnc-filepath-utils.h>
 #include <gnc-engine-guile.h>
 #include <gnc-prefs.h>
 #include <gnc-prefs-utils.h>
@@ -107,7 +108,7 @@ static inline void
 write_report_file (const char *html, const char* file)
 {
     if (!file || !html || !*html) return;
-    std::ofstream ofs{file};
+    auto ofs{gnc_open_filestream(file)};
     if (!ofs)
     {
         std::cerr << "Failed to open file " << file << " for writing\n";
@@ -342,11 +343,11 @@ Gnucash::add_quotes (const bo_str& uri)
 
     qof_session_begin(session, uri->c_str(), SESSION_NORMAL_OPEN);
     if (qof_session_get_error(session) != ERR_BACKEND_NO_ERR)
-        cleanup_and_exit_with_failure (session);
+        return cleanup_and_exit_with_failure (session);
 
     qof_session_load(session, NULL);
     if (qof_session_get_error(session) != ERR_BACKEND_NO_ERR)
-        cleanup_and_exit_with_failure (session);
+        return cleanup_and_exit_with_failure (session);
 
     try
     {
@@ -365,7 +366,7 @@ Gnucash::add_quotes (const bo_str& uri)
     }
     qof_session_save(session, NULL);
     if (qof_session_get_error(session) != ERR_BACKEND_NO_ERR)
-        cleanup_and_exit_with_failure (session);
+        return cleanup_and_exit_with_failure (session);
 
     qof_session_destroy(session);
     qof_event_resume();

@@ -6,7 +6,7 @@ if (CMAKE_VERSION VERSION_GREATER_EQUAL 3.14.0)
 endif()
 
 project (gnucash
-    VERSION 5.0
+    VERSION 5.1
 )
 
 enable_testing()
@@ -290,12 +290,18 @@ if (GUILE3_FOUND) # found guile-3.0
   set(GUILE_EFFECTIVE_VERSION 3.0)
   set(GUILE_INCLUDE_DIRS ${GUILE3_INCLUDE_DIRS})
   set(GUILE_LDFLAGS ${GUILE3_LDFLAGS})
-  find_program (GUILD_EXECUTABLE NAMES guild3.0 guild)
+  pkg_get_variable (GUILD_EXECUTABLE guile-3.0 guild)
+  pkg_get_variable (GUILE_EXECUTABLE guile-3.0 guile)
+  if (NOT GUILD_EXECUTABLE)
+    find_program (GUILD_EXECUTABLE NAMES guild3.0 guild)
+  endif()
   if (NOT GUILD_EXECUTABLE)
     message (SEND_ERROR "The guild executable was not found, but is required. Please set GUILD_EXECUTABLE.")
   endif()
   message(STATUS "Using guile-3.0.x")
-  find_program (GUILE_EXECUTABLE NAMES guile3.0 guile)
+  if (NOT GUILE_EXECUTABLE)
+    find_program (GUILE_EXECUTABLE NAMES guile3.0 guile)
+  endif()
 
 elseif (GUILE22_FOUND) # found guile-2.2
   add_definitions (-DHAVE_GUILE22)
@@ -303,12 +309,18 @@ elseif (GUILE22_FOUND) # found guile-2.2
   set(GUILE_EFFECTIVE_VERSION 2.2)
   set(GUILE_INCLUDE_DIRS ${GUILE22_INCLUDE_DIRS})
   set(GUILE_LDFLAGS ${GUILE22_LDFLAGS})
-  find_program (GUILD_EXECUTABLE NAMES guild2.2 guild)
+  pkg_get_variable (GUILD_EXECUTABLE guile-2.2 guild)
+  pkg_get_variable (GUILE_EXECUTABLE guile-2.2 guile)
+  if (NOT GUILD_EXECUTABLE)
+    find_program (GUILD_EXECUTABLE NAMES guild2.2 guild)
+  endif()
   if (NOT GUILD_EXECUTABLE)
     message (SEND_ERROR "The guild executable was not found, but is required. Please set GUILD_EXECUTABLE.")
   endif()
   message(STATUS "Using guile-2.2.x")
-  find_program (GUILE_EXECUTABLE NAMES guile2.2 guile)
+  if (NOT GUILE_EXECUTABLE)
+    find_program (GUILE_EXECUTABLE NAMES guile2.2 guile)
+  endif()
 
 elseif (GUILE2_FOUND) # found guile-2.0
   add_definitions (-DHAVE_GUILE20)
@@ -316,12 +328,18 @@ elseif (GUILE2_FOUND) # found guile-2.0
   set(GUILE_EFFECTIVE_VERSION 2.0)
   set(GUILE_INCLUDE_DIRS ${GUILE2_INCLUDE_DIRS})
   set(GUILE_LDFLAGS ${GUILE2_LDFLAGS})
-  find_program (GUILD_EXECUTABLE NAMES guild2.0 guild)
+  pkg_get_variable (GUILD_EXECUTABLE guile-2.0 guild)
+  pkg_get_variable (GUILE_EXECUTABLE guile-2.0 guile)
+  if (NOT GUILD_EXECUTABLE)
+    find_program (GUILD_EXECUTABLE NAMES guild2.0 guild)
+  endif()
   if (NOT GUILD_EXECUTABLE)
     message (SEND_ERROR "The guild executable was not found, but is required. Please set GUILD_EXECUTABLE.")
   endif()
   message(STATUS "Using guile-2.0.x")
-  find_program (GUILE_EXECUTABLE NAMES guile2.0 guile)
+  if (NOT GUILE_EXECUTABLE)
+    find_program (GUILE_EXECUTABLE NAMES guile2.0 guile)
+  endif()
 
 else()
   message (FATAL_ERROR "Neither guile 3.0, guile 2.2, nor guile 2.0 were found GnuCash can't run without one of them. Ensure that one is installed and can be found with pkg-config.")
@@ -478,16 +496,13 @@ endif()
 # ############################################################
 
 if (WITH_PYTHON)
-  find_package(PythonInterp 3)
+  set (PYTHON_MIN_VERSION 3.6.0)
+  find_package(PythonInterp ${PYTHON_MIN_VERSION})
   if (NOT PYTHONINTERP_FOUND)
     message(SEND_ERROR "Python support enabled, but Python interpreter not found.")
   endif()
 
-  if (PYTHON_VERSION_STRING VERSION_LESS "3.2.0")
-    message(SEND_ERROR "Found python version ${PYTHON_VERSION_STRING}, but it's too old. Need python >= 3.2.0")
-  endif()
-
-  find_package(PythonLibs 3)
+  find_package(PythonLibs ${PYTHON_MIN_VERSION})
   if (NOT PYTHONLIBS_FOUND)
     message(SEND_ERROR "Python support enabled, but Python libraries not found.")
   endif()
@@ -677,14 +692,6 @@ install(FILES ${gnucash_DOCS} DESTINATION ${CMAKE_INSTALL_DOCDIR})
 
 # Create config.h
 
-if (WIN32)
-  if (MINGW)
-    set (HAVE_SCANF_LLD 1)
-  else ()
-    set (HAVE_SCANF_I64D 1)
-  endif()
-endif()
-
 check_include_files (dirent.h HAVE_DIRENT_H)
 check_include_files (dlfcn.h HAVE_DLFCN_H)
 check_include_files (glob.h HAVE_GLOB_H)
@@ -749,7 +756,6 @@ set (HAVE_LINK 1)
 set (HAVE_LOCALTIME_R 1)
 set (HAVE_PTHREAD_MUTEX_INIT 1)
 set (HAVE_PTHREAD_PRIO_INHERIT 1)
-set (HAVE_SCANF_LLD 1)
 set (HAVE_SETENV 1)
 set (HAVE_STPCPY 1)
 set (HAVE_STRPTIME 1)
@@ -773,15 +779,17 @@ endif()
 
 string(REGEX MATCH "^([0-9]+)\.([0-9]+)" GLIB_MIN_MATCH ${GLIB_MIN_VERSION})
 set(GLIB_API ${CMAKE_MATCH_1}_${CMAKE_MATCH_2})
-target_compile_definitions(PkgConfig::GLIB2 INTERFACE
+set_property(TARGET PkgConfig::GLIB2 PROPERTY INTERFACE_COMPILE_DEFINITIONS
   GLIB_VERSION_MIN_REQUIRED=GLIB_VERSION_${GLIB_API}
   GLIB_VERSION_MAX_ALLOWED=GLIB_VERSION_${GLIB_API})
 
+if (WITH_GNUCASH)
 string(REGEX MATCH "^([0-9]+)\.([0-9]+)" GTK_MIN_MATCH ${GTK_MIN_VERSION})
 set(GTK_API ${CMAKE_MATCH_1}_${CMAKE_MATCH_2})
-target_compile_definitions(PkgConfig::GTK3 INTERFACE
-    GDK_VERSION_MIN_REQUIRED=GDK_VERSION_${GTK_API}
-    GDK_VERSION_MAX_ALLOWED=GDK_VERSION_${GTK_API})
+set_property(TARGET PkgConfig::GTK3 PROPERTY INTERFACE_COMPILE_DEFINITIONS
+  GDK_VERSION_MIN_REQUIRED=GDK_VERSION_${GTK_API}
+  GDK_VERSION_MAX_ALLOWED=GDK_VERSION_${GTK_API})
+endif()
 
 add_definitions (-DHAVE_CONFIG_H)
 

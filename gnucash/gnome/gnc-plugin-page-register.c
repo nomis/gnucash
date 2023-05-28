@@ -95,9 +95,6 @@ static QofLogModule log_module = GNC_MOD_GUI;
 #define DEFAULT_LINES_AMOUNT         50
 #define DEFAULT_FILTER_NUM_DAYS_GL  "30"
 
-static void gnc_plugin_page_register_class_init (GncPluginPageRegisterClass*
-                                                 klass);
-static void gnc_plugin_page_register_init (GncPluginPageRegister* plugin_page);
 static void gnc_plugin_page_register_finalize (GObject* object);
 
 /* static Account *gnc_plugin_page_register_get_current_account (GncPluginPageRegister *page); */
@@ -243,22 +240,6 @@ static void gnc_plugin_page_register_event_handler (QofInstance* entity,
 static GncInvoice* invoice_from_split (Split* split);
 static GList* invoices_from_transaction (Transaction* trans);
 
-static void
-toggle_change_state (GSimpleAction *simple,
-                     GVariant      *state,
-                     gpointer       user_data)
-{
-   g_simple_action_set_state (simple, state);
-}
-
-static void
-radio_change_state (GSimpleAction *simple,
-                    GVariant      *state,
-                    gpointer       user_data)
-{
-   g_simple_action_set_state (simple, state);
-}
-
 /************************************************************/
 /*                          Actions                         */
 /************************************************************/
@@ -341,9 +322,9 @@ static GActionEntry gnc_plugin_page_register_actions [] =
     { "ReportsAccountReportAction", gnc_plugin_page_register_cmd_account_report, NULL, NULL, NULL },
     { "ReportsAcctTransReportAction", gnc_plugin_page_register_cmd_transaction_report, NULL, NULL, NULL },
 
-    { "ViewStyleDoubleLineAction", gnc_plugin_page_register_cmd_style_double_line, NULL, "false", toggle_change_state },
-    { "SplitTransactionAction", gnc_plugin_page_register_cmd_expand_transaction, NULL, "false", toggle_change_state },
-    { "ViewStyleRadioAction", gnc_plugin_page_register_cmd_style_changed, "i", "@i 0", radio_change_state },
+    { "ViewStyleDoubleLineAction", gnc_plugin_page_register_cmd_style_double_line, NULL, "false", NULL },
+    { "SplitTransactionAction", gnc_plugin_page_register_cmd_expand_transaction, NULL, "false", NULL },
+    { "ViewStyleRadioAction", gnc_plugin_page_register_cmd_style_changed, "i", "@i 0", NULL },
 };
 static guint gnc_plugin_page_register_n_actions = G_N_ELEMENTS(gnc_plugin_page_register_actions);
 
@@ -494,8 +475,6 @@ G_DEFINE_TYPE_WITH_PRIVATE (GncPluginPageRegister, gnc_plugin_page_register,
 #define GNC_PLUGIN_PAGE_REGISTER_GET_PRIVATE(o)  \
    ((GncPluginPageRegisterPrivate*)gnc_plugin_page_register_get_instance_private((GncPluginPageRegister*)o))
 
-static GObjectClass* parent_class = NULL;
-
 /************************************************************/
 /*                      Implementation                      */
 /************************************************************/
@@ -622,8 +601,6 @@ gnc_plugin_page_register_class_init (GncPluginPageRegisterClass* klass)
     GObjectClass* object_class = G_OBJECT_CLASS (klass);
     GncPluginPageClass* gnc_plugin_class = GNC_PLUGIN_PAGE_CLASS (klass);
 
-    parent_class = g_type_class_peek_parent (klass);
-
     object_class->finalize = gnc_plugin_page_register_finalize;
 
     gnc_plugin_class->tab_icon        = GNC_ICON_ACCOUNT;
@@ -685,7 +662,7 @@ gnc_plugin_page_register_finalize (GObject* object)
 
     ENTER ("object %p", object);
 
-    G_OBJECT_CLASS (parent_class)->finalize (object);
+    G_OBJECT_CLASS (gnc_plugin_page_register_parent_class)->finalize (object);
     LEAVE (" ");
 }
 
@@ -1047,6 +1024,7 @@ gnc_plugin_page_register_ui_update (gpointer various,
 
         gsm->search_action_label = NULL;
         gsm->search_action_name = *iter;
+        gsm->search_action_target = NULL;
 
         found = gnc_menubar_model_find_item (gnc_window_get_menubar_model (gnc_window), gsm);
 
@@ -1072,7 +1050,7 @@ gnc_plugin_page_register_ui_update (gpointer various,
             {
                 /* Adjust the action's label and tooltip */
                 found = gnc_menubar_model_update_item (gnc_window_get_menubar_model (gnc_window),
-                                                       *iter, _(*label_iter), NULL, _(*tooltip_iter));
+                                                       *iter, NULL, _(*label_iter), NULL, _(*tooltip_iter));
 
                 PINFO("split model_item action '%s', found is %d, iter label is '%s'",
                         *iter, found, _(*label_iter));
@@ -1090,7 +1068,7 @@ gnc_plugin_page_register_ui_update (gpointer various,
             {
                 /* Adjust the action's label and tooltip */
                 found = gnc_menubar_model_update_item (gnc_window_get_menubar_model (gnc_window),
-                                                       *iter, _(*label_iter), NULL, _(*tooltip_iter));
+                                                       *iter, NULL, _(*label_iter), NULL, _(*tooltip_iter));
 
                 PINFO("trans model_item action '%s', found is %d, iter label is '%s'",
                         *iter, found, _(*label_iter));
@@ -1103,6 +1081,11 @@ gnc_plugin_page_register_ui_update (gpointer various,
         gnc_plugin_add_menu_tooltip_callbacks (gnc_window_get_menubar (gnc_window),
                                                gnc_window_get_menubar_model (gnc_window),
                                                gnc_window_get_statusbar (gnc_window));
+
+        // need to add any accelerator keys, default or user added
+        gnc_add_accelerator_keys_for_menu (gnc_window_get_menubar (gnc_window),
+                                           gnc_window_get_menubar_model (gnc_window),
+                                           gnc_window_get_accel_group (gnc_window));
     }
 }
 
@@ -1186,7 +1169,7 @@ gnc_plugin_page_register_focus (GncPluginPage* plugin_page,
 
         // Chain up to use parent version of 'focus_page' which will
         // use an idle_add as the page changed signal is emitted multiple times.
-        GNC_PLUGIN_PAGE_CLASS (parent_class)->focus_page (plugin_page, TRUE);
+        GNC_PLUGIN_PAGE_CLASS (gnc_plugin_page_register_parent_class)->focus_page (plugin_page, TRUE);
     }
     else
         priv->page_focus = FALSE;
