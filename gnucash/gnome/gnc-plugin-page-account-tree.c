@@ -480,7 +480,7 @@ gnc_plugin_page_account_tree_open (Account *account, GtkWindow *win)
     g_return_if_fail(plugin_page);
     window = plugin_page->window;
 
-    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), plugin_page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), plugin_page, FALSE);
 
     page = GNC_PLUGIN_PAGE_ACCOUNT_TREE (plugin_page);
     priv = GNC_PLUGIN_PAGE_ACCOUNT_TREE_GET_PRIVATE(page);
@@ -886,7 +886,7 @@ gnc_plugin_page_account_tree_recreate_page (GtkWidget *window,
     priv = GNC_PLUGIN_PAGE_ACCOUNT_TREE_GET_PRIVATE(account_page);
 
     /* Install it now so we can then manipulate the created widget */
-    gnc_main_window_open_page(GNC_MAIN_WINDOW(window), page);
+    gnc_main_window_open_page(GNC_MAIN_WINDOW(window), page, TRUE);
 
     gnc_tree_view_account_restore(GNC_TREE_VIEW_ACCOUNT(priv->tree_view),
                                   &priv->fd, key_file, group_name);
@@ -960,7 +960,7 @@ gppat_open_account_common (GncPluginPageAccountTree *page,
 
     window = GNC_PLUGIN_PAGE (page)->window;
     new_page = gnc_plugin_page_register_new (account, include_subs);
-    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page, FALSE);
 }
 
 static void

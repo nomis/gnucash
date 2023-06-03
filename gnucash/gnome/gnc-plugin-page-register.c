@@ -1204,8 +1204,6 @@ gnc_plugin_page_register_create_widget (GncPluginPage* plugin_page)
         LEAVE ("existing widget %p", priv->widget);
         return priv->widget;
     }
-    // on create, the page will be the current page so set the focus flag
-    priv->page_focus = TRUE;
 
     priv->widget = gtk_box_new (GTK_ORIENTATION_VERTICAL, 0);
     gtk_box_set_homogeneous (GTK_BOX (priv->widget), FALSE);
@@ -1739,14 +1737,13 @@ gnc_plugin_page_register_recreate_page (GtkWidget* window,
     gnc_plugin_page_set_use_new_window (page, FALSE);
 
     /* Install it now so we can them manipulate the created widget */
-    gnc_main_window_open_page (GNC_MAIN_WINDOW (window), page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW (window), page, TRUE);
 
     /* Now update the page to the last state it was in */
     gnc_plugin_page_register_restore_edit_menu (page, key_file, group_name);
 
     /* enable the refresh */
     priv->enable_refresh = TRUE;
-    gnc_ledger_display_refresh (priv->ledger);
     LEAVE (" ");
     return page;
 }
@@ -4839,7 +4836,7 @@ gnc_plugin_page_register_cmd_jump (GSimpleAction *simple,
         return;
     }
 
-    gnc_main_window_open_page (GNC_MAIN_WINDOW (window), new_page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW (window), new_page, FALSE);
     gsr = gnc_plugin_page_register_get_gsr (new_page);
 
     /* Test for visibility of split */

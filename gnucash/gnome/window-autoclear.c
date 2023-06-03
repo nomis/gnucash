@@ -113,7 +113,7 @@ show_cleared_splits (GList *splits)
     gnc_ledger_display_refresh (ledger);
     page = gnc_plugin_page_register_new_ledger (ledger);
     main_window_update_page_name (page, _("Cleared Transactions"));
-    gnc_main_window_open_page (NULL, page);
+    gnc_main_window_open_page (NULL, page, FALSE);
     qof_query_destroy (book_query);
     qof_query_destroy (guid_query);
 }
@@ -269,4 +269,3 @@ autoClearWindow (GtkWidget *parent, Account *account)
 
     return data;
 }
-

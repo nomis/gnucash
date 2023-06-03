@@ -308,11 +308,11 @@ gnc_plugin_page_get_plugin_name (GncPluginPage *plugin_page)
 
 /* Signals */
 void
-gnc_plugin_page_inserted (GncPluginPage *plugin_page)
+gnc_plugin_page_inserted (GncPluginPage *plugin_page, gboolean recreate)
 {
     g_return_if_fail (GNC_IS_PLUGIN_PAGE(plugin_page));
 
-    g_signal_emit (G_OBJECT(plugin_page), signals[INSERTED], 0);
+    g_signal_emit (G_OBJECT(plugin_page), signals[INSERTED], 0, recreate);
 }
 
 void
@@ -420,9 +420,10 @@ gnc_plugin_page_class_init (GncPluginPageClass *klass)
                                       G_SIGNAL_RUN_FIRST,
                                       G_STRUCT_OFFSET (GncPluginPageClass, inserted),
                                       NULL, NULL,
-                                      g_cclosure_marshal_VOID__VOID,
+                                      g_cclosure_marshal_VOID__BOOLEAN,
                                       G_TYPE_NONE,
-                                      0);
+                                      1,
+                                      G_TYPE_BOOLEAN);
     signals[REMOVED] = g_signal_new ("removed",
                                      G_OBJECT_CLASS_TYPE (klass),
                                      G_SIGNAL_RUN_FIRST,
@@ -870,7 +871,7 @@ gnc_plugin_page_main_window_changed (GtkWindow *window,
  * the callback for the "page_changed" signal and save a pointer to the
  * page focus function. */
 void
-gnc_plugin_page_inserted_cb (GncPluginPage *page, gpointer user_data)
+gnc_plugin_page_inserted_cb (GncPluginPage *page, gboolean recreate, gpointer user_data)
 {
     GncPluginPagePrivate *priv;
 
@@ -883,7 +884,8 @@ gnc_plugin_page_inserted_cb (GncPluginPage *page, gpointer user_data)
                                               page);
 
     // on initial load try and set the page focus
-    (GNC_PLUGIN_PAGE_GET_CLASS(page)->focus_page)(page, TRUE);
+    if (!recreate)
+        (GNC_PLUGIN_PAGE_GET_CLASS(page)->focus_page)(page, TRUE);
 }
 
 

@@ -2096,7 +2096,7 @@ gnc_main_window_open_report(int report_id, GncMainWindow *window)
         g_return_if_fail(GNC_IS_MAIN_WINDOW(window));
 
     reportPage = gnc_plugin_page_report_new( report_id );
-    gnc_main_window_open_page( window, reportPage );
+    gnc_main_window_open_page( window, reportPage, FALSE );
 }
 
 void
@@ -2110,7 +2110,7 @@ gnc_main_window_open_report_url(const char * url, GncMainWindow *window)
         g_return_if_fail(GNC_IS_MAIN_WINDOW(window));
 
     reportPage = gnc_plugin_page_report_new( 42 /* url? */ );
-    gnc_main_window_open_page( window, reportPage );
+    gnc_main_window_open_page( window, reportPage, FALSE );
 }
 
 /** @} */

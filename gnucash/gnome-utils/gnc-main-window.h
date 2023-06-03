@@ -128,9 +128,13 @@ void gnc_main_window_display_page (GncPluginPage *page);
  *
  *  @param page The new page of data to be displayed, or the existing
  *  page of data the should be brought to the top and displayed.
+ *
+ *  @param recreate Don't focus pages (new or added) or windows that
+ *  already exist (for restoring pages when loading the book).
  */
 void gnc_main_window_open_page (GncMainWindow *window,
-                                GncPluginPage *page);
+                                GncPluginPage *page,
+                                gboolean recreate);
 
 
 /** Remove a data plugin page from a window and display the previous

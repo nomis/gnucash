@@ -70,7 +70,7 @@ do_find_cb (QofQuery *query, gpointer user_data, gpointer *result)
     if (new_ledger)
     {
         page = gnc_plugin_page_register_new_ledger (ledger);
-        gnc_main_window_open_page (GNC_MAIN_WINDOW(ftd->parent), page);
+        gnc_main_window_open_page (GNC_MAIN_WINDOW(ftd->parent), page, FALSE);
     }
 
     qof_query_destroy (ftd->q);
@@ -145,7 +145,7 @@ gnc_ui_find_transactions_dialog_create(GtkWindow *parent, GNCLedgerDisplay * ori
                                                NULL);
             params2 = gnc_search_param_prepend (params2, "", NULL,
                                                type, SPLIT_TRANS, TRANS_NOTES, NULL);
-            params = gnc_search_param_prepend_compound (params, 
+            params = gnc_search_param_prepend_compound (params,
                                                         N_("Description, Notes, or Memo"),
                                                         params2,
                                                         GTK_JUSTIFY_LEFT, SEARCH_PARAM_ANY);

@@ -216,5 +216,5 @@ gnc_plugin_register_cmd_general_ledger (GSimpleAction *simple,
     g_return_if_fail (data != NULL);
 
     page = gnc_plugin_page_register_new_gl ();
-    gnc_main_window_open_page (data->window, page);
+    gnc_main_window_open_page (data->window, page, FALSE);
 }

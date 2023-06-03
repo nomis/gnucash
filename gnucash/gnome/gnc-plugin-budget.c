@@ -197,7 +197,7 @@ GnuCash 3.8 or later.");
     g_free (description);
     g_free (date);
 
-    gnc_main_window_open_page (data->window, page);
+    gnc_main_window_open_page (data->window, page, FALSE);
 }
 
 /* If only one budget exists, open it; otherwise user selects one to open */
@@ -226,7 +226,7 @@ gnc_plugin_budget_cmd_open_budget (GSimpleAction *simple,
 
         if (bgt)
            gnc_main_window_open_page (data->window,
-                                      gnc_plugin_page_budget_new (bgt));
+                                      gnc_plugin_page_budget_new (bgt), FALSE);
     }
     else     /* if no budgets exist yet, just open a new budget */
         gnc_plugin_budget_cmd_new_budget (simple, parameter, user_data);
@@ -267,7 +267,7 @@ gnc_plugin_budget_cmd_copy_budget (GSimpleAction *simple,
             g_free (name);
 
             gnc_main_window_open_page (data->window,
-                                       gnc_plugin_page_budget_new (copy));
+                                       gnc_plugin_page_budget_new (copy), FALSE);
         }
     }
     else     /* if no budgets exist yet, just open a new budget */

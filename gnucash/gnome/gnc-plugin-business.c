@@ -274,7 +274,7 @@ gnc_plugin_business_cmd_customer_page (GSimpleAction *simple,
     g_return_if_fail (GNC_IS_PLUGIN_BUSINESS (mw->data));
 
     page = gnc_plugin_page_owner_tree_new (GNC_OWNER_CUSTOMER);
-    gnc_main_window_open_page (mw->window, page);
+    gnc_main_window_open_page (mw->window, page, FALSE);
 }
 
 static void
@@ -408,7 +408,7 @@ gnc_plugin_business_cmd_vendor_page (GSimpleAction *simple,
     g_return_if_fail (GNC_IS_PLUGIN_BUSINESS (mw->data));
 
     page = gnc_plugin_page_owner_tree_new (GNC_OWNER_VENDOR);
-    gnc_main_window_open_page (mw->window, page);
+    gnc_main_window_open_page (mw->window, page, FALSE);
 }
 
 static void
@@ -541,7 +541,7 @@ gnc_plugin_business_cmd_employee_page (GSimpleAction *simple,
     g_return_if_fail (GNC_IS_PLUGIN_BUSINESS (mw->data));
 
     page = gnc_plugin_page_owner_tree_new (GNC_OWNER_EMPLOYEE);
-    gnc_main_window_open_page (mw->window, page);
+    gnc_main_window_open_page (mw->window, page, FALSE);
 }
 
 static void
