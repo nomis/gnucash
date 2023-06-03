@@ -466,6 +466,20 @@ void gnc_main_window_restore_default_state(GncMainWindow *window);
  *  should cancel the pending operation.  TRUE otherwise */
 gboolean gnc_main_window_finish_pending (GncMainWindow *window);
 
+/** Tell a window to finish any outstanding activities of a specific
+ *  type.  This function will call gnc_plugin_page_finish_pending for
+ *  each installed page of the specified type.
+ *  If any page returns a failure indication, then the function stops
+ *  walking pages and immediately returns a failure.
+ *
+ *  @param window The window whose pages should be checked.
+ *
+ *  @param type The type of pages that should be checked.
+ *
+ *  @return FALSE if any page could not or would not comply, which
+ *  should cancel the pending operation.  TRUE otherwise */
+gboolean gnc_main_window_finish_pending_by_type (GncMainWindow *window,
+                                                 GType type);
 
 /** Tell all pages in all windows to finish any outstanding
  *  activities.  This function will call
@@ -476,6 +490,19 @@ gboolean gnc_main_window_finish_pending (GncMainWindow *window);
  *  @return FALSE if any page could not or would not comply, which
  *  should cancel the pending operation.  TRUE otherwise */
 gboolean gnc_main_window_all_finish_pending (void);
+
+/** Tell all pages of a type in all windows to finish any outstanding
+ *  activities.  This function will call gnc_plugin_page_finish_pending
+ *  for each installed page of the specified type.  If any page returns
+ *  a failure indication, then the function stops walking pages and
+ *  immediately returns a failure.
+ *
+ *  @param type The type of pages that should be checked.
+ *
+ *  @return FALSE if any page could not or would not comply, which
+ *  should cancel the pending operation.  TRUE otherwise */
+gboolean gnc_main_window_all_finish_pending_by_type (GType type);
+
 
 /** Change the sensitivity of a command in all windows.  This can be
  *  used to serialize access to a command so that in cannot be

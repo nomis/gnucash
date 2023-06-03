@@ -1083,7 +1083,7 @@ gnc_main_window_save_all_windows(GKeyFile *keyfile)
 
 
 gboolean
-gnc_main_window_finish_pending (GncMainWindow *window)
+gnc_main_window_finish_pending_by_type (GncMainWindow *window, GType type)
 {
     GncMainWindowPrivate *priv;
     GList *item;
@@ -1093,7 +1093,12 @@ gnc_main_window_finish_pending (GncMainWindow *window)
     priv = GNC_MAIN_WINDOW_GET_PRIVATE(window);
     for (item = priv->installed_pages; item; item = g_list_next(item))
     {
-        if (!gnc_plugin_page_finish_pending(static_cast<GncPluginPage*>(item->data)))
+        auto page{static_cast<GncPluginPage*>(item->data)};
+
+        if (!G_TYPE_CHECK_INSTANCE_TYPE(page, type))
+            continue;
+
+        if (!gnc_plugin_page_finish_pending(page))
         {
             return FALSE;
         }
@@ -1101,16 +1106,24 @@ gnc_main_window_finish_pending (GncMainWindow *window)
     return TRUE;
 }
 
+gboolean
+gnc_main_window_finish_pending (GncMainWindow *window)
+{
+    return gnc_main_window_finish_pending_by_type(window, G_TYPE_OBJECT);
+}
+
 
 gboolean
-gnc_main_window_all_finish_pending (void)
+gnc_main_window_all_finish_pending_by_type (GType type)
 {
     const GList *windows, *item;
 
     windows = gnc_gobject_tracking_get_list(GNC_MAIN_WINDOW_NAME);
     for (item = windows; item; item = g_list_next(item))
     {
-        if (!gnc_main_window_finish_pending(static_cast<GncMainWindow*>(item->data)))
+        auto window{static_cast<GncMainWindow*>(item->data)};
+
+        if (!gnc_main_window_finish_pending_by_type(window, type))
         {
             return FALSE;
         }
@@ -1121,6 +1134,12 @@ gnc_main_window_all_finish_pending (void)
         return FALSE;
     }
     return TRUE;
+}
+
+gboolean
+gnc_main_window_all_finish_pending (void)
+{
+    return gnc_main_window_all_finish_pending_by_type (G_TYPE_OBJECT);
 }
 
 
