@@ -485,7 +485,7 @@ gnc_main_window_restore_page (GncMainWindow *window,
             if (page->window == nullptr)
             {
                 gnc_plugin_page_set_use_new_window(page, FALSE);
-                gnc_main_window_open_page(window, page);
+                gnc_main_window_open_page(window, page, TRUE);
             }
 
             /* Restore the page name */
@@ -3045,12 +3045,16 @@ gnc_main_window_engine_commit_error_callback( gpointer data,
  *
  *  @param menu_label The widget that should be added into the
  *  notebook popup menu for this page.  This should be a GtkLabel.
+ *
+ *  @param recreate The page is being recreated (while loading the book)
+ *  so always add the page the bottom and don't focus it after insertion.
  */
 static void
 gnc_main_window_connect (GncMainWindow *window,
                          GncPluginPage *page,
                          GtkWidget *tab_hbox,
-                         GtkWidget *menu_label)
+                         GtkWidget *menu_label,
+                         gboolean recreate)
 {
     GncMainWindowPrivate *priv;
     GtkNotebook *notebook;
@@ -3060,7 +3064,7 @@ gnc_main_window_connect (GncMainWindow *window,
     priv = GNC_MAIN_WINDOW_GET_PRIVATE(window);
     notebook = GTK_NOTEBOOK (priv->notebook);
 
-    if (gnc_prefs_get_bool (GNC_PREFS_GROUP_GENERAL, GNC_PREF_TAB_OPEN_ADJACENT))
+    if (!recreate && gnc_prefs_get_bool (GNC_PREFS_GROUP_GENERAL, GNC_PREF_TAB_OPEN_ADJACENT))
         current_position = g_list_index (priv->installed_pages, priv->current_page) + 1;
 
     priv->installed_pages = g_list_insert (priv->installed_pages, page, current_position);
@@ -3068,8 +3072,9 @@ gnc_main_window_connect (GncMainWindow *window,
     gtk_notebook_insert_page_menu (notebook, page->notebook_page,
                                    tab_hbox, menu_label, current_position);
     gtk_notebook_set_tab_reorderable (notebook, page->notebook_page, TRUE);
-    gnc_plugin_page_inserted (page);
-    gtk_notebook_set_current_page (notebook, current_position);
+    gnc_plugin_page_inserted (page, recreate);
+    if (!recreate)
+        gtk_notebook_set_current_page (notebook, current_position);
 
     if (GNC_PLUGIN_PAGE_GET_CLASS(page)->window_changed)
         (GNC_PLUGIN_PAGE_GET_CLASS(page)->window_changed)(page, GTK_WIDGET(window));
@@ -3190,11 +3195,14 @@ gnc_main_window_display_page (GncPluginPage *page)
  *  front and the notebook switch to display the specified page.  If
  *  the page is new then it will be added to the specified window.  If
  *  the window is nullptr, the new page will be added to the first
- *  window.
+ *  window.  In recreate mode, don't bring existing windows to the
+ *  front or switch to the page (for restoring pages when loading the
+ *  book).
  */
 void
 gnc_main_window_open_page (GncMainWindow *window,
-                           GncPluginPage *page)
+                           GncPluginPage *page,
+                           gboolean recreate)
 {
     GncMainWindowPrivate *priv;
     GtkWidget *tab_hbox;
@@ -3212,7 +3220,8 @@ gnc_main_window_open_page (GncMainWindow *window,
 
     if (gnc_main_window_page_exists(page))
     {
-        gnc_main_window_display_page(page);
+        if (!recreate)
+            gnc_main_window_display_page(page);
         return;
     }
 
@@ -3332,13 +3341,12 @@ gnc_main_window_open_page (GncMainWindow *window,
     /*
      * Now install it all in the window.
      */
-    gnc_main_window_connect(window, page, tab_hbox, label);
+    gnc_main_window_connect(window, page, tab_hbox, label, recreate);
 
     color_string = gnc_plugin_page_get_page_color(page);
     main_window_update_page_color (page, color_string);
     LEAVE("");
 }
-
 
 /*  Remove a data plugin page from a window and display the previous
  *  page.  If the page removed was the last page in the window, and
@@ -4996,7 +5004,7 @@ gnc_main_window_cmd_window_move_page (GSimpleAction *simple,
     gtk_widget_show(GTK_WIDGET(new_window));
 
     /* Now add the page to the new window */
-    gnc_main_window_connect (new_window, page, tab_widget, menu_widget);
+    gnc_main_window_connect (new_window, page, tab_widget, menu_widget, FALSE);
 
     /* Unref the page components now that we're done */
     g_object_unref(page->notebook_page);

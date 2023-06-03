@@ -736,7 +736,7 @@ row_selected_trans_cb (GtkTreeView *view, GtkTreePath *path,
         Account       *account = xaccSplitGetAccount (split);
 
         page = gnc_plugin_page_register_new (account, FALSE);
-        gnc_main_window_open_page (NULL, page);
+        gnc_main_window_open_page (NULL, page, FALSE);
         gsr = gnc_plugin_page_register_get_gsr (page);
         gnc_split_reg_raise (gsr);
 

@@ -671,7 +671,7 @@ gnc_plugin_page_sx_list_recreate_page (GtkWidget *window,
     priv = GNC_PLUGIN_PAGE_SX_LIST_GET_PRIVATE(page);
 
     /* Install it now so we can them manipulate the created widget */
-    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), GNC_PLUGIN_PAGE(page));
+    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), GNC_PLUGIN_PAGE(page), TRUE);
 
     {
         GError *err = NULL;

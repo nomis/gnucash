@@ -211,7 +211,7 @@ gnc_html_register_url_cb (const char *location, const char *label,
     }
 
     page = gnc_plugin_page_register_new (account, FALSE);
-    gnc_main_window_open_page (GNC_MAIN_WINDOW (result->parent), page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW (result->parent), page, FALSE);
     if (split)
     {
         gsr = gnc_plugin_page_register_get_gsr (page);

@@ -1003,7 +1003,7 @@ gnc_reconcile_window_open_register(RecnWindow *recnData)
 
     include_children = xaccAccountGetReconcileChildrenStatus (account);
     recnData->page = gnc_plugin_page_register_new (account, include_children);
-    gnc_main_window_open_page (NULL, recnData->page);
+    gnc_main_window_open_page (NULL, recnData->page, FALSE);
     gsr = gnc_plugin_page_register_get_gsr (recnData->page);
     gnc_split_reg_raise (gsr);
     return gsr;

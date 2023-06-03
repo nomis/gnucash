@@ -975,7 +975,7 @@ gnc_invoice_window_print_invoice (GtkWindow *parent, GncInvoice *invoice,
     if (report_id >= 0)
     {
         reportPage = gnc_plugin_page_report_new (report_id);
-        gnc_main_window_open_page (GNC_MAIN_WINDOW (parent), reportPage);
+        gnc_main_window_open_page (GNC_MAIN_WINDOW (parent), reportPage, FALSE);
     }
     return reportPage;
 }
@@ -1012,7 +1012,7 @@ gnc_invoice_window_printCB (GtkWindow* parent, gpointer data)
                                                            report_guid);
         g_free (report_guid);
     }
-    gnc_main_window_open_page (GNC_MAIN_WINDOW (iw->dialog), iw->reportPage);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW (iw->dialog), iw->reportPage, FALSE);
 }
 
 static gboolean
@@ -2429,7 +2429,8 @@ find_handler (gpointer find_data, gpointer user_data)
 static InvoiceWindow *
 gnc_invoice_new_page (QofBook *bookp, InvoiceDialogType type,
                       GncInvoice *invoice, const GncOwner *owner,
-                      GncMainWindow *window, const gchar *group_name)
+                      GncMainWindow *window, const gchar *group_name,
+                      gboolean recreate)
 {
     InvoiceWindow *iw;
     GncOwner *billto;
@@ -2481,7 +2482,7 @@ gnc_invoice_new_page (QofBook *bookp, InvoiceDialogType type,
     if (!window)
         window = gnc_plugin_business_get_window ();
 
-    gnc_main_window_open_page (window, new_page);
+    gnc_main_window_open_page (window, new_page, recreate);
 
     /* Initialize the summary bar */
     gnc_invoice_redraw_all_cb(iw->reg, iw);
@@ -2577,7 +2578,7 @@ gnc_invoice_recreate_page (GncMainWindow *window,
     g_free(tmp_string);
     g_free(owner_type);
 
-    iw = gnc_invoice_new_page (book, type, invoice, &owner, window, group_name);
+    iw = gnc_invoice_new_page (book, type, invoice, &owner, window, group_name, TRUE);
     return iw->page;
 
 give_up:
@@ -3157,7 +3158,8 @@ gnc_ui_invoice_edit (GtkWindow *parent, GncInvoice *invoice)
 
     iw = gnc_invoice_new_page (gncInvoiceGetBook(invoice), type,
                                invoice, gncInvoiceGetOwner (invoice),
-                               GNC_MAIN_WINDOW(gnc_ui_get_main_window (GTK_WIDGET (parent))), NULL);
+                               GNC_MAIN_WINDOW(gnc_ui_get_main_window (GTK_WIDGET (parent))),
+                               NULL, FALSE);
 
     return iw;
 }

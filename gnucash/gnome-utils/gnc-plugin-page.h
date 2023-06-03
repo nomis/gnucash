@@ -88,7 +88,7 @@ typedef struct
     const gchar *plugin_name;
 
     /* Signals */
-    void (* inserted) (GncPluginPage *plugin_page);
+    void (* inserted) (GncPluginPage *plugin_page, gboolean recreate);
     void (* removed) (GncPluginPage *plugin_page);
     void (* selected) (GncPluginPage *plugin_page);
     void (* unselected) (GncPluginPage *plugin_page);
@@ -412,9 +412,14 @@ void gnc_plugin_page_set_page_color (GncPluginPage *page, const char *color);
  *
  *  @param page The page the callback is setup for.
  *
+ *  @param recreate The page is being recreated when loading the book so it
+ *  should not be focused immediately.
+ *
  *  @param user_data The page focus function
  */
-void gnc_plugin_page_inserted_cb (GncPluginPage *page, gpointer user_data);
+void gnc_plugin_page_inserted_cb (GncPluginPage *page,
+                                  gboolean recreate,
+                                  gpointer user_data);
 
 
 /** Disconnect the page_changed_id signal callback.
@@ -581,7 +586,7 @@ GAction *gnc_plugin_page_get_action (GncPluginPage *page,
                                      const gchar *action_name);
 
 /* Signals */
-void gnc_plugin_page_inserted (GncPluginPage *plugin_page);
+void gnc_plugin_page_inserted (GncPluginPage *plugin_page, gboolean recreate);
 void gnc_plugin_page_removed (GncPluginPage *plugin_page);
 void gnc_plugin_page_selected (GncPluginPage *plugin_page);
 void gnc_plugin_page_unselected (GncPluginPage *plugin_page);

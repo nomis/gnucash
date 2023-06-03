@@ -3420,7 +3420,7 @@ gnc_ui_qif_import_finish_cb (GtkAssistant *assistant,
     if (!acct_tree_found)
     {
         page = gnc_plugin_page_account_tree_new ();
-        gnc_main_window_open_page (NULL, page);
+        gnc_main_window_open_page (NULL, page, FALSE);
     }
 }
 

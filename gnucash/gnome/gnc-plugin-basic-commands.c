@@ -463,7 +463,7 @@ gnc_main_window_cmd_actions_scheduled_transaction_editor (GSimpleAction *simple,
                                                           gpointer       user_data)
 {
     GncPluginPage *page = gnc_plugin_page_sx_list_new ();
-    gnc_main_window_open_page (NULL, page);
+    gnc_main_window_open_page (NULL, page, FALSE);
 }
 
 static void

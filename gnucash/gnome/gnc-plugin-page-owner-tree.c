@@ -720,7 +720,7 @@ gnc_plugin_page_owner_tree_recreate_page (GtkWidget *window,
     priv = GNC_PLUGIN_PAGE_OWNER_TREE_GET_PRIVATE(owner_page);
 
     /* Install it now so we can then manipulate the created widget */
-    gnc_main_window_open_page(GNC_MAIN_WINDOW(window), page);
+    gnc_main_window_open_page(GNC_MAIN_WINDOW(window), page, TRUE);
 
     gnc_tree_view_owner_restore(GNC_TREE_VIEW_OWNER(priv->tree_view),
                                 &priv->fd, key_file, group_name, owner_type);

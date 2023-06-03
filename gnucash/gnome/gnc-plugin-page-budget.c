@@ -622,7 +622,7 @@ gnc_plugin_page_budget_recreate_page (GtkWidget *window, GKeyFile *key_file,
     priv = GNC_PLUGIN_PAGE_BUDGET_GET_PRIVATE(budget_page);
 
     /* Install it now so we can then manipulate the created widget */
-    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), page, TRUE);
 
     //FIXME
     if (!gnc_budget_view_restore (priv->budget_view, key_file, group_name))
@@ -667,7 +667,7 @@ gppb_account_activated_cb (GncBudgetView* view, Account* account,
 
     window = GNC_PLUGIN_PAGE(page)->window;
     new_page = gnc_plugin_page_register_new (account, FALSE);
-    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page, FALSE);
 }
 
 
@@ -728,7 +728,7 @@ gnc_plugin_page_budget_cmd_open_account (GSimpleAction *simple,
     {
         account = tmp->data;
         new_page = gnc_plugin_page_register_new (account, FALSE);
-        gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page);
+        gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page, FALSE);
     }
     g_list_free (acct_list);
 }
@@ -755,7 +755,7 @@ gnc_plugin_page_budget_cmd_open_subaccounts (GSimpleAction *simple,
     {
         account = tmp->data;
         new_page = gnc_plugin_page_register_new (account, TRUE);
-        gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page);
+        gnc_main_window_open_page (GNC_MAIN_WINDOW(window), new_page, FALSE);
     }
     g_list_free (acct_list);
 }
@@ -1348,7 +1348,7 @@ gnc_plugin_page_budget_cmd_budget_report (GSimpleAction *simple,
         priv->reportPage = gnc_plugin_page_report_new (report_id);
     }
 
-    gnc_main_window_open_page (GNC_MAIN_WINDOW (priv->dialog), priv->reportPage);
+    gnc_main_window_open_page (GNC_MAIN_WINDOW (priv->dialog), priv->reportPage, FALSE);
 }
 
 static void

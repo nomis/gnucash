@@ -1067,7 +1067,7 @@ _show_created_transactions (GncSxSinceLastRunDialog *app_dialog, GList *created_
     gnc_ledger_display_refresh (ledger);
     page = gnc_plugin_page_register_new_ledger (ledger);
     g_object_set (G_OBJECT(page), "page-name", _("Created Transactions"), NULL);
-    gnc_main_window_open_page (NULL, page);
+    gnc_main_window_open_page (NULL, page, FALSE);
 
     qof_query_destroy (query);
     qof_query_destroy (book_query);
