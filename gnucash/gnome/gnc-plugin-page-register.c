@@ -4326,6 +4326,9 @@ gnc_plugin_page_register_cmd_reconcile (GSimpleAction *simple,
 
     g_return_if_fail (GNC_IS_PLUGIN_PAGE_REGISTER (page));
 
+    if (!gnc_main_window_all_finish_pending_by_type (GNC_TYPE_PLUGIN_PAGE_REGISTER))
+        return;
+
     account = gnc_plugin_page_register_get_account (page);
 
     window = gnc_window_get_gtk_window (GNC_WINDOW (GNC_PLUGIN_PAGE (

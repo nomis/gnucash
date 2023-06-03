@@ -1782,6 +1782,9 @@ gnc_plugin_page_account_tree_cmd_reconcile (GSimpleAction *simple,
     account = gnc_plugin_page_account_tree_get_current_account (page);
     g_return_if_fail (account != NULL);
 
+    if (!gnc_main_window_all_finish_pending_by_type (GNC_TYPE_PLUGIN_PAGE_REGISTER))
+        return;
+
     window = GNC_PLUGIN_PAGE (page)->window;
     recnData = recnWindow (window, account);
     gnc_ui_reconcile_window_raise (recnData);
