@@ -395,6 +395,7 @@ gnc_split_register_move_cursor (VirtualLocation *p_new_virt_loc,
     }
 
     info = gnc_split_register_get_info (reg);
+    printf("%s: info->trans_expanded == %d\n", __func__, info->trans_expanded);
 
     /* The transaction we are coming from */
     old_split = gnc_split_register_get_current_split (reg);
@@ -605,6 +606,7 @@ gnc_split_register_move_cursor (VirtualLocation *p_new_virt_loc,
                                                   reg->style == REG_STYLE_JOURNAL);
         }
 
+        printf("%s: info->trans_expanded = FALSE\n", __func__);
         info->trans_expanded = FALSE;
 
         do_refresh = TRUE;

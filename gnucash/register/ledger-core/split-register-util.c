@@ -70,6 +70,9 @@ gnc_split_register_get_info (SplitRegister *reg)
     if (reg->sr_info == NULL)
         gnc_split_register_init_info (reg);
 
+    // reg and reg->sr_info remain the same, trans_expanded becomes false
+    //printf("%s: reg=%p reg->sr_info=%p trans_expanded=%d\n", __func__, reg, reg->sr_info, reg->sr_info->trans_expanded);
+
     return reg->sr_info;
 }
 

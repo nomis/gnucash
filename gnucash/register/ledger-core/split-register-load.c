@@ -870,11 +870,13 @@ gnc_split_register_load (SplitRegister* reg, GList* slist,
             gnc_split_register_set_trans_visible (reg, trans_split_loc.vcell_loc,
                                                   TRUE, multi_line);
 
+            printf("%s: info->trans_expanded = %d\n", __func__, reg->style == REG_STYLE_LEDGER);
             info->trans_expanded = (reg->style == REG_STYLE_LEDGER);
         }
         else
         {
             save_loc = trans_split_loc;
+            printf("%s: info->trans_expanded = FALSE\n", __func__);
             info->trans_expanded = FALSE;
         }
 

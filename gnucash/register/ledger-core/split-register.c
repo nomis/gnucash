@@ -233,6 +233,7 @@ gnc_split_register_expand_current_trans (SplitRegister* reg, gboolean expand)
         }
     }
 
+    printf("%s: info->trans_expanded = %d\n", __func__, expand);
     info->trans_expanded = expand;
 
     gnc_table_set_virt_cell_cursor (reg->table,
@@ -272,6 +273,8 @@ gnc_split_register_current_trans_expanded (SplitRegister* reg)
     if (reg->style == REG_STYLE_AUTO_LEDGER ||
         reg->style == REG_STYLE_JOURNAL)
         return TRUE;
+
+    printf("%s: reg=%p info=%p expanded=%d\n", __func__, reg, info, info->trans_expanded);
 
     return info->trans_expanded;
 }
@@ -699,6 +702,7 @@ gnc_split_register_duplicate_current (SplitRegister* reg)
         info->cursor_hint_trans_split = trans_split;
         info->cursor_hint_cursor_class = CURSOR_CLASS_TRANS;
 
+        printf("%s: info->trans_expanded = FALSE\n", __func__);
         info->trans_expanded = FALSE;
     }
 
@@ -1235,6 +1239,7 @@ gnc_split_register_delete_current_trans (SplitRegister* reg)
     }
     else
     {
+        printf("%s: info->trans_expanded = FALSE\n", __func__);
         info->trans_expanded = FALSE;
     }
 
@@ -1287,6 +1292,7 @@ gnc_split_register_void_current_trans (SplitRegister* reg, const char* reason)
     if (xaccSplitGetReconcile (split) == VREC)
         return;
 
+    printf("%s: info->trans_expanded = FALSE\n", __func__);
     info->trans_expanded = FALSE;
 
     gnc_suspend_gui_refresh ();
@@ -1337,6 +1343,7 @@ gnc_split_register_unvoid_current_trans (SplitRegister* reg)
     if (xaccSplitGetReconcile (split) != VREC)
         return;
 
+    printf("%s: info->trans_expanded = FALSE\n", __func__);
     info->trans_expanded = FALSE;
 
     gnc_suspend_gui_refresh ();
@@ -1917,6 +1924,7 @@ gnc_split_register_save (SplitRegister* reg, gboolean do_commit)
     {
         SRSaveData* sd;
 
+        printf("%s: info->trans_expanded == %d\n", __func__, info->trans_expanded);
         sd = gnc_split_register_save_data_new (
             trans, split, (info->trans_expanded ||
                            reg->style == REG_STYLE_AUTO_LEDGER ||

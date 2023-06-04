@@ -875,6 +875,7 @@ gnc_plugin_page_register_ui_update (gpointer various,
     g_simple_action_set_enabled (G_SIMPLE_ACTION(action), reg->style == REG_STYLE_LEDGER);
 
     g_signal_handlers_block_by_func (action, gnc_plugin_page_register_cmd_expand_transaction, page);
+    printf("%s: SplitTransactionAction expanded=%d\n", __func__, expanded);
     g_action_change_state (G_ACTION(action), g_variant_new_boolean (expanded));
     g_signal_handlers_unblock_by_func (action, gnc_plugin_page_register_cmd_expand_transaction, page);
 
@@ -910,6 +911,7 @@ gnc_plugin_page_register_ui_update (gpointer various,
 
     /* Set available actions based on read only */
     trans = gnc_split_register_get_current_trans (reg);
+    printf("%s: trans=%p\n\n", __func__, trans);
 
     if (cursor_class == CURSOR_CLASS_SPLIT)
     {
@@ -4741,6 +4743,7 @@ gnc_plugin_page_register_cmd_expand_transaction (GSimpleAction *simple,
 
     state = g_action_get_state (G_ACTION(simple));
 
+    printf("%s: g_action_change_state %d -> %d\n", __func__, g_variant_get_boolean (state), !g_variant_get_boolean (state));
     g_action_change_state (G_ACTION(simple), g_variant_new_boolean (!g_variant_get_boolean (state)));
 
     expand = !g_variant_get_boolean (state);
