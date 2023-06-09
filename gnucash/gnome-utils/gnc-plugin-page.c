@@ -883,6 +883,8 @@ gnc_plugin_page_inserted_cb (GncPluginPage *page, gboolean recreate, gpointer us
                                               G_CALLBACK(gnc_plugin_page_main_window_changed),
                                               page);
 
+    printf("%s: recreate=%d\n", __func__, recreate);
+
     // on initial load try and set the page focus
     if (!recreate)
         (GNC_PLUGIN_PAGE_GET_CLASS(page)->focus_page)(page, TRUE);
