@@ -1184,6 +1184,8 @@ gnc_plugin_page_register_focus (GncPluginPage* plugin_page,
 
     // set the sheet focus setting
     gnc_split_reg_set_sheet_focus (gsr, priv->page_focus);
+
+    gnc_ledger_display_set_focus (priv->ledger, priv->page_focus);
 }
 
 static GtkWidget*
