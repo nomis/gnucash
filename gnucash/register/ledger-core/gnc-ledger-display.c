@@ -849,10 +849,13 @@ gnc_ledger_display_internal (Account* lead_account, Query* q,
 
     gnc_split_register_set_data (ld->reg, ld, gnc_ledger_display_parent);
 
-    /* We don't need to recreate the query, so skip that refresh step by
-     * bypassing gnc_ledger_display_refresh().
+    /* Must call this before gnc_table_realize_gui() gets called or all the
+     * combo boxes will be empty. Use an empty list of splits instad of running
+     * the query when we're not in focus yet.
      */
-    gnc_ledger_display_refresh_internal (ld);
+    ld->loading = TRUE;
+    gnc_split_register_load (ld->reg, NULL, gnc_ledger_display_leader (ld));
+    ld->loading = FALSE;
     return ld;
 }
 

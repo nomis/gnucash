@@ -1752,7 +1752,6 @@ gnc_plugin_page_register_recreate_page (GtkWidget* window,
 
     /* enable the refresh */
     priv->enable_refresh = TRUE;
-    gnc_ledger_display_refresh (priv->ledger);
     LEAVE (" ");
     return page;
 }
