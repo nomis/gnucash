@@ -24,6 +24,7 @@
 #include <config.h>
 
 #include <time.h>
+#include <stdio.h>
 
 #include "Account.h"
 #include "Query.h"
@@ -623,6 +624,7 @@ refresh_handler (GHashTable* changes, gpointer user_data)
     if (ld->visible)
     {
         DEBUG ("immediate refresh because ledger is visible");
+        printf("%s: \"%s\" refresh (already in focus)\n", __func__, xaccAccountGetName(gnc_ledger_display_leader(ld)));
         gnc_ledger_display_refresh (ld);
     }
     else
@@ -862,6 +864,8 @@ gnc_ledger_display_internal (Account* lead_account, Query* q,
     ld->loading = TRUE;
     gnc_split_register_load (ld->reg, NULL, NULL, gnc_ledger_display_leader (ld));
     ld->loading = FALSE;
+
+    printf("%s: \"%s\" create\n", __func__, xaccAccountGetName(gnc_ledger_display_leader(ld)));
     return ld;
 }
 
@@ -898,6 +902,12 @@ gnc_ledger_display_refresh_internal (GNCLedgerDisplay* ld)
 
     if (ld->loading)
         return;
+
+    if (ld->needs_refresh) {
+        printf("%s: \"%s\" (needed refresh)\n", __func__, xaccAccountGetName(gnc_ledger_display_leader(ld)));
+    } else {
+        printf("%s: \"%s\" (update)\n", __func__, xaccAccountGetName(gnc_ledger_display_leader(ld)));
+    }
 
     /* It's not clear if we should re-run the query, or if we should
      * just use qof_query_last_run().  It's possible that the dates
@@ -1003,6 +1013,7 @@ void gnc_ledger_display_set_focus (GNCLedgerDisplay* ld, gboolean focus)
     if (ld->visible && ld->needs_refresh)
     {
         DEBUG ("deferred refresh because ledger is now visible");
+        printf("%s: \"%s\" refresh (now in focus)\n", __func__, xaccAccountGetName(gnc_ledger_display_leader(ld)));
         gnc_ledger_display_refresh (ld);
     }
 }
