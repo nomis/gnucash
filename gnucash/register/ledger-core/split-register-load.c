@@ -126,6 +126,7 @@ gnc_split_register_load_desc_cells (SplitRegister* reg)
     if (!cell) return;
 
     gnc_completion_cell_set_sort_enabled (cell, TRUE);
+    gnc_completion_cell_set_autosize (cell, FALSE);
 }
 
 /** Add a transaction to the register.
