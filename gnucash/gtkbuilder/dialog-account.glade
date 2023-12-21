@@ -1103,7 +1103,7 @@
     <property name="border-width">6</property>
     <property name="title" translatable="yes">New Account</property>
     <property name="window-position">center</property>
-    <property name="type-hint">dialog</property>
+    <property name="type-hint">normal</property>
     <signal name="destroy" handler="gnc_account_window_destroy_cb" swapped="no"/>
     <child internal-child="vbox">
       <object class="GtkBox" id="vbox300">
