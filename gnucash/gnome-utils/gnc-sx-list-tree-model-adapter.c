@@ -49,6 +49,9 @@ struct _GncSxListTreeModelAdapter
     GncSxInstanceModel *instances;
     GtkTreeStore *orig;
     GtkTreeModelSort *real;
+    gulong signal_added;
+    gulong signal_updated;
+    gulong signal_removing;
 };
 
 /* Signal codes */
@@ -554,12 +557,19 @@ gnc_sx_list_tree_model_adapter_new (GncSxInstanceModel *instances)
 
     gsltma_populate_tree_store (rtn);
 
-    g_signal_connect (G_OBJECT(rtn->instances), "added",
-                     (GCallback)gsltma_added_cb, (gpointer)rtn);
-    g_signal_connect (G_OBJECT(rtn->instances), "updated",
-                     (GCallback)gsltma_updated_cb, (gpointer)rtn);
-    g_signal_connect (G_OBJECT(rtn->instances), "removing",
-                     (GCallback)gsltma_removing_cb, (gpointer)rtn);
+printf("%s(): signal connect %p\n", __func__, rtn);
+    rtn->signal_added = g_signal_connect (G_OBJECT(rtn->instances),
+                                          "added",
+                                          (GCallback)gsltma_added_cb,
+                                          (gpointer)rtn);
+    rtn->signal_updated = g_signal_connect (G_OBJECT(rtn->instances),
+                                            "updated",
+                                            (GCallback)gsltma_updated_cb,
+                                            (gpointer)rtn);
+    rtn->signal_removing = g_signal_connect (G_OBJECT(rtn->instances),
+                                             "removing",
+                                             (GCallback)gsltma_removing_cb,
+                                             (gpointer)rtn);
 
     return rtn;
 }
@@ -604,6 +614,14 @@ gnc_sx_list_tree_model_adapter_dispose (GObject *obj)
 
     if (adapter->disposed) return;
     adapter->disposed = TRUE;
+
+printf("%s(): signal disconnect %p\n", __func__, adapter);
+    g_signal_handler_disconnect (G_OBJECT(adapter->instances),
+                                 adapter->signal_added);
+    g_signal_handler_disconnect (G_OBJECT(adapter->instances),
+                                 adapter->signal_updated);
+    g_signal_handler_disconnect (G_OBJECT(adapter->instances),
+                                 adapter->signal_removing);
 
     g_object_unref (G_OBJECT(adapter->instances));
     adapter->instances = NULL;
