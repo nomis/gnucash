@@ -356,6 +356,9 @@ class Session(GnuCashCoreClass):
                 if mode is None:
                     mode = SessionOpenMode.SESSION_NORMAL_OPEN
                 self.begin(book_uri, mode)
+                is_new = mode in (SessionOpenMode.SESSION_NEW_STORE, SessionOpenMode.SESSION_NEW_OVERWRITE)
+                if not is_new:
+                    self.load()
             except GnuCashBackendException as backend_exception:
                 self.end()
                 self.destroy()
