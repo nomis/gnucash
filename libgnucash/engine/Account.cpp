@@ -3242,6 +3242,15 @@ xaccAccountGetName (const Account *acc)
     return GET_PRIVATE(acc)->accountName;
 }
 
+std::vector<const Account*>
+gnc_account_get_all_parents (const Account *account)
+{
+    std::vector<const Account*> rv;
+    for (auto a = account; !gnc_account_is_root (a); a = gnc_account_get_parent (a))
+        rv.push_back (a);
+    return rv;
+}
+
 gchar *
 gnc_account_get_full_name(const Account *account)
 {

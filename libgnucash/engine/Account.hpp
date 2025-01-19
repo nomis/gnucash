@@ -61,6 +61,8 @@ void gnc_account_foreach_split_until_date (const Account *acc, time64 end_date,
  *  @result Split* or nullptr if not found */
 Split* gnc_account_find_split (const Account*, std::function<bool(const Split*)>, bool);
 
+std::vector<const Account*> gnc_account_get_all_parents (const Account *account);
+
 #endif /* GNC_COMMODITY_HPP */
 /** @} */
 /** @} */
