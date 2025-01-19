@@ -48,6 +48,7 @@
 #include "qofbook.h"
 #include "Split.h"
 #include "AccountP.hpp"
+#include "Account.hpp"
 #include "Scrub.h"
 #include "TransactionP.hpp"
 #include "TransLog.h"
@@ -1653,20 +1654,23 @@ int
 xaccSplitCompareAccountFullNames(const Split *sa, const Split *sb)
 {
     Account *aa, *ab;
-    char *full_a, *full_b;
-    int retval;
-    if (!sa && !sb) return 0;
+    if (sa == sb) return 0;
     if (!sa) return -1;
     if (!sb) return 1;
 
     aa = sa->acc;
     ab = sb->acc;
-    full_a = gnc_account_get_full_name(aa);
-    full_b = gnc_account_get_full_name(ab);
-    retval = g_utf8_collate(full_a, full_b);
-    g_free(full_a);
-    g_free(full_b);
-    return retval;
+    if (aa == ab) return 0;
+
+    auto path_a = gnc_account_get_all_parents (aa);
+    auto path_b = gnc_account_get_all_parents (ab);
+    auto mismatch_pair = std::mismatch (path_a.rbegin(), path_a.rend(),
+                                        path_b.rbegin(), path_b.rend());
+
+    return mismatch_pair.first == path_a.rend() ? -1
+        : mismatch_pair.second == path_b.rend() ? 1
+        : g_utf8_collate (xaccAccountGetName (*mismatch_pair.first),
+                          xaccAccountGetName (*mismatch_pair.second));
 }
 
 

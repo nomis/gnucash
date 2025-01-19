@@ -3254,12 +3254,6 @@ gnc_account_get_all_parents (const Account *account)
 gchar *
 gnc_account_get_full_name(const Account *account)
 {
-    AccountPrivate *priv;
-    const Account *a;
-    char *fullname;
-    const gchar **names;
-    int level;
-
     /* So much for hardening the API. Too many callers to this function don't
      * bother to check if they have a non-nullptr pointer before calling. */
     if (nullptr == account)
@@ -3268,35 +3262,24 @@ gnc_account_get_full_name(const Account *account)
     /* errors */
     g_return_val_if_fail(GNC_IS_ACCOUNT(account), g_strdup(""));
 
-    /* optimizations */
-    priv = GET_PRIVATE(account);
-    if (!priv->parent)
-        return g_strdup("");
+    auto path{gnc_account_get_all_parents (account)};
+    auto seps_size{path.empty() ? 0 : strlen (account_separator) * (path.size() - 1)};
+    auto alloc_size{std::accumulate (path.begin(), path.end(), seps_size,
+                                     [](auto sum, auto acc)
+                                     { return sum + strlen (xaccAccountGetName (acc)); })};
+    auto rv = g_new (char, alloc_size + 1);
+    auto p = rv;
 
-    /* Figure out how much space is needed by counting the nodes up to
-     * the root. */
-    level = 0;
-    for (a = account; a; a = priv->parent)
-    {
-        priv = GET_PRIVATE(a);
-        level++;
-    }
+    std::for_each (path.rbegin(), path.rend(),
+                   [&p, rv](auto a)
+                   {
+                       if (p != rv)
+                           p = stpcpy (p, account_separator);
+                       p = stpcpy (p, xaccAccountGetName (a));
+                   });
+    *p = '\0';
 
-    /* Get all the pointers in the right order. The root node "entry"
-     * becomes the terminating nullptr pointer for the array of strings. */
-    names = (const gchar **)g_malloc(level * sizeof(gchar *));
-    names[--level] = nullptr;
-    for (a = account; level > 0; a = priv->parent)
-    {
-        priv = GET_PRIVATE(a);
-        names[--level] = priv->accountName;
-    }
-
-    /* Build the full name */
-    fullname = g_strjoinv(account_separator, (gchar **)names);
-    g_free(names);
-
-    return fullname;
+    return rv;
 }
 
 const char *
