@@ -623,9 +623,10 @@ sxftd_destroy( GtkWidget *w, gpointer user_data )
         xaccSchedXactionDestroy(sxfti->sx);
         sxfti->sx = NULL;
     }
-
-    g_object_unref(G_OBJECT(sxfti->dense_cal_model));
-    g_object_unref(G_OBJECT(sxfti->example_cal));
+    if (sxfti->dense_cal_model)
+        g_object_unref(G_OBJECT(sxfti->dense_cal_model));
+    if (sxfti->example_cal)
+        g_object_unref(G_OBJECT(sxfti->example_cal));
 
     g_free(sxfti);
 }
