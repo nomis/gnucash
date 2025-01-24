@@ -59,6 +59,7 @@
 static const QofLogModule log_module = G_LOG_DOMAIN;
 
 #define DIALOG_PAYMENT_CM_CLASS "payment-dialog"
+#define GNC_PREFS_GROUP         "dialogs.process-payment"
 
 typedef enum
 {
@@ -327,8 +328,9 @@ gnc_payment_window_close_handler (gpointer data)
 {
     PaymentWindow *pw = data;
 
-    if (pw)
-        gtk_widget_destroy (pw->dialog);
+    if (!pw) return;
+    gnc_save_window_size (GNC_PREFS_GROUP, GTK_WINDOW(pw->dialog));
+    gtk_widget_destroy (pw->dialog);
 }
 
 static void
@@ -1203,6 +1205,19 @@ doc_sort_func (GtkTreeModel *model,
     return ret;
 }
 
+static gboolean
+payment_dialog_delete_event_cb (GtkWidget *widget,
+                                GdkEvent  *event,
+                                gpointer   user_data)
+{
+    PaymentWindow *pw = user_data;
+
+    // this cb allows the window size to be saved on closing with the X
+    gnc_save_window_size (GNC_PREFS_GROUP, GTK_WINDOW(pw->dialog));
+
+    return FALSE;
+}
+
 static PaymentWindow *
 new_payment_window (GtkWindow *parent, QofBook *book, InitialPaymentInfo *tx_info)
 {
@@ -1404,6 +1419,8 @@ new_payment_window (GtkWindow *parent, QofBook *book, InitialPaymentInfo *tx_inf
     g_signal_connect (G_OBJECT (selection), "changed",
                       G_CALLBACK (gnc_payment_dialog_xfer_acct_changed_cb), pw);
 
+    g_signal_connect (G_OBJECT(pw->dialog), "delete-event",
+                      G_CALLBACK(payment_dialog_delete_event_cb), pw);
 
     /* Register with the component manager */
     pw->component_id =
@@ -1417,6 +1434,8 @@ new_payment_window (GtkWindow *parent, QofBook *book, InitialPaymentInfo *tx_inf
                                          GNC_ID_ACCOUNT,
                                          QOF_EVENT_CREATE | QOF_EVENT_MODIFY |
                                          QOF_EVENT_DESTROY);
+
+    gnc_restore_window_size (GNC_PREFS_GROUP, GTK_WINDOW(pw->dialog), GTK_WINDOW(parent));
 
     /* Show it all */
     gtk_widget_show_all (pw->dialog);

@@ -39,6 +39,7 @@
 #include "dialog-billterms.h"
 
 #define DIALOG_BILLTERMS_CM_CLASS "billterms-dialog"
+#define GNC_PREFS_GROUP           "dialogs.bill-terms"
 
 enum term_cols
 {
@@ -709,8 +710,10 @@ static void
 billterms_window_close_handler (gpointer data)
 {
     BillTermsWindow *btw = data;
+
     g_return_if_fail (btw);
 
+    gnc_save_window_size (GNC_PREFS_GROUP, GTK_WINDOW(btw->window));
     gtk_widget_destroy (btw->window);
 }
 
@@ -718,7 +721,22 @@ void
 billterms_window_close (GtkWidget *widget, gpointer data)
 {
     BillTermsWindow *btw = data;
+
     gnc_close_gui_component (btw->component_id);
+}
+
+static gboolean
+billterms_window_delete_event_cb (GtkWidget *widget,
+                                  GdkEvent  *event,
+                                  gpointer   data)
+{
+    BillTermsWindow *btw = data;
+
+    if (!btw) return FALSE;
+
+    // this cb allows the window size to be saved on closing with the X
+    gnc_save_window_size (GNC_PREFS_GROUP, GTK_WINDOW(btw->window));
+    return FALSE;
 }
 
 void
@@ -809,7 +827,7 @@ gnc_ui_billterms_window_new (GtkWindow *parent, QofBook *book)
     gnc_widget_style_context_add_class (GTK_WIDGET(btw->window), "gnc-class-bill-terms");
 
     g_signal_connect (btw->window, "key_press_event",
-                      G_CALLBACK (billterms_window_key_press_cb), btw);
+                      G_CALLBACK(billterms_window_key_press_cb), btw);
 
     /* Initialize the view */
     view = GTK_TREE_VIEW(btw->terms_view);
@@ -849,6 +867,11 @@ gnc_ui_billterms_window_new (GtkWindow *parent, QofBook *book)
                                     btw);
 
     gnc_gui_component_set_session (btw->component_id, btw->session);
+
+    g_signal_connect (G_OBJECT(btw->window), "delete-event",
+                      G_CALLBACK(billterms_window_delete_event_cb), btw);
+
+    gnc_restore_window_size (GNC_PREFS_GROUP, GTK_WINDOW(btw->window), GTK_WINDOW(parent));
 
     gtk_widget_show_all (btw->window);
     billterms_window_refresh (btw);
