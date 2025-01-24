@@ -1977,10 +1977,11 @@ loan_rev_get_loan_range( LoanAssistantData *ldd, GDate *start, GDate *end )
 
     endDateMath = g_new0( struct tm, 1 );
     g_date_to_struct_tm (ldd->ld.startDate, endDateMath);
-    monthsTotal = ( (ldd->ld.numPer - 1)
+    monthsTotal = ( ldd->ld.numPer
                     * ( ldd->ld.perSize == GNC_MONTHS ? 1 : 12 ) );
     endDateMath->tm_mon += monthsTotal;
     gnc_gdate_set_time64 (end, gnc_mktime (endDateMath));
+    g_date_subtract_days( end, 1 );
     g_free (endDateMath);
 }
 
@@ -2108,13 +2109,13 @@ loan_rev_recalc_schedule( LoanAssistantData *ldd )
             char *eloc;
             rowNumData =
                 (gnc_numeric*)g_hash_table_lookup( repayment_schedule,
-                                                   &curDate );
+                                                   &nextDate );
             if ( rowNumData == NULL)
             {
                 int j;
                 GDate *dateKeyCopy = g_date_new();
 
-                *dateKeyCopy = curDate;
+                *dateKeyCopy = nextDate;
                 rowNumData = g_new0( gnc_numeric, ldd->ld.revNumPmts );
                 g_assert( rowNumData != NULL );
                 for ( j = 0; j < ldd->ld.revNumPmts; j++ )
@@ -2198,13 +2199,13 @@ loan_rev_recalc_schedule( LoanAssistantData *ldd )
                     | GNC_HOW_RND_ROUND_HALF_UP;
                 gnc_numeric val;
                 rowNumData = (gnc_numeric*)g_hash_table_lookup( repayment_schedule,
-                             &curDate );
+                             &nextDate );
                 if ( rowNumData == NULL )
                 {
                     int j;
                     GDate *dateKeyCopy = g_date_new();
 
-                    *dateKeyCopy = curDate;
+                    *dateKeyCopy = nextDate;
                     rowNumData = g_new0( gnc_numeric, ldd->ld.revNumPmts );
                     g_assert( rowNumData != NULL );
                     for ( j = 0; j < ldd->ld.revNumPmts; j++ )
@@ -3084,4 +3085,3 @@ gnc_ui_sx_loan_assistant_create (void)
 
     gnc_window_adjust_for_screen (GTK_WINDOW(ldd->window));
 }
-
