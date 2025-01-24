@@ -776,6 +776,32 @@ gnc_query_view_set_query_sort (GNCQueryView *qview, gboolean new_column)
 }
 
 /********************************************************************\
+ * gnc_query_set_expand_column                                      *
+ *   sets the column that expands to take up free space starting    *
+ *   from 0                                                         *
+ *                                                                  *
+ * Args: qview      - view to change the sort order for             *
+ *       column     - the tree view column to set to expand         *
+ * Returns: nothing                                                 *
+\********************************************************************/
+void
+gnc_query_set_expand_column (GNCQueryView *qview, gint column)
+{
+    g_return_if_fail (qview != NULL);
+    g_return_if_fail (GNC_IS_QUERY_VIEW(qview));
+
+    GtkTreeView *view = GTK_TREE_VIEW(qview);
+
+    gint num_columns = gtk_tree_view_get_n_columns (view);
+
+    if (column >= 0 && column < num_columns)
+    {
+        GtkTreeViewColumn *tree_column = gtk_tree_view_get_column (view, column);
+        gtk_tree_view_column_set_expand (tree_column, TRUE);
+    }
+}
+
+/********************************************************************\
  * gnc_query_view_fill                                              *
  *   Add all items to the list store                                *
  *                                                                  *

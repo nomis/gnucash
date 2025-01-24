@@ -352,6 +352,7 @@ gnc_dialog_query_view_create (GtkWindow *parent, GList *param_list, Query *q,
                               const char *title, const char *label,
                               gboolean abs, gboolean inv_sort,
                               gint sort_column, GtkSortType order,
+                              gint expand_column,
                               GNCDisplayViewButton *buttons,
                               const gchar *pref_group, gpointer user_data)
 {
@@ -379,6 +380,9 @@ gnc_dialog_query_view_create (GtkWindow *parent, GList *param_list, Query *q,
 
     /* Set the sort order */
     gnc_query_sort_order (GNC_QUERY_VIEW (dqv->qview), sort_column, order);
+
+    /* Set the column that expands, columns start from 0 */
+    gnc_query_set_expand_column (GNC_QUERY_VIEW (dqv->qview), expand_column);
 
     /* Unselect all rows */
     gnc_query_view_unselect_all (GNC_QUERY_VIEW (dqv->qview));

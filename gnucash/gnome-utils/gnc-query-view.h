@@ -119,6 +119,8 @@ gboolean gnc_query_view_item_in_view (GNCQueryView *qview, gpointer item);
 
 void gnc_query_sort_order (GNCQueryView *qview, gint column, GtkSortType order);
 
+void gnc_query_set_expand_column (GNCQueryView *qview, gint column);
+
 void gnc_query_scroll_to_selection (GNCQueryView *qview);
 
 void gnc_query_force_scroll_to_selection (GNCQueryView *qview);

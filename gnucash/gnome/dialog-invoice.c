@@ -3923,6 +3923,7 @@ gnc_invoice_show_docs_due (GtkWindow *parent, QofBook *book, double days_in_adva
                                           message,
                                           TRUE, FALSE,
                                           1, GTK_SORT_ASCENDING,
+                                          1, // columns start from 0
                                           duetype == DUE_FOR_VENDOR ?
                                                   vendorbuttons :
                                                   customerbuttons, 
