@@ -792,10 +792,15 @@ gnc_main_window_restore_window (GncMainWindow *window, GncMainWindowSaveData *da
         data->page_num = i;
         gboolean page_added = gnc_main_window_restore_page (window, data);
 
-        added_page_offsets = g_slist_append (added_page_offsets, GINT_TO_POINTER(offset));
-
         if (!page_added) // if page not added, increase offset to compensate
+        {
             offset ++;
+            added_page_offsets = g_slist_append (added_page_offsets, 
+                                                 GINT_TO_POINTER(-1));
+        }
+        else
+            added_page_offsets = g_slist_append (added_page_offsets,
+                                                 GINT_TO_POINTER(offset));
 
         /* give the page a chance to display */
         while (gtk_events_pending ())
@@ -824,18 +829,31 @@ gnc_main_window_restore_window (GncMainWindow *window, GncMainWindowSaveData *da
         /* Dump any list that might exist */
         g_list_free(priv->usage_order);
         priv->usage_order = nullptr;
-        /* Now rebuild the list from the key file. */
+
+        gint default_page_position = -1;
+
+        /* Now rebuild the list from the key file, skipping pages not added */
         for (i = 0; i < length; i++)
         {
-            gint offset = GPOINTER_TO_INT(g_slist_nth_data (added_page_offsets, order[i] - 1));
-            gpointer page = g_list_nth_data (priv->installed_pages, order[i] - 1 - offset);
+            gint zero_based_page_number = order[i] - 1;
+
+            gint offset = GPOINTER_TO_INT(g_slist_nth_data (added_page_offsets, 
+                                                            zero_based_page_number));
+
+            if (offset == -1)
+                continue;
+
+            gpointer page = g_list_nth_data (priv->installed_pages,
+                                             zero_based_page_number - offset);
+
+            if (default_page_position == -1)
+                default_page_position = zero_based_page_number - offset;
+
             if (page)
-            {
-                priv->usage_order = g_list_append(priv->usage_order, page);
-            }
+                priv->usage_order = g_list_append (priv->usage_order, page);
         }
         gtk_notebook_set_current_page (GTK_NOTEBOOK(priv->notebook),
-                                       order[0] - 1 - offset);
+                                       default_page_position);
 
         g_signal_emit_by_name (window, "page_changed",
                                g_list_nth_data (priv->usage_order, 0));
