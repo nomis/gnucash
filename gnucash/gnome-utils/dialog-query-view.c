@@ -43,6 +43,7 @@ struct _DialogQueryView
     GtkWidget            * qview;
     GtkWidget            * button_box;
     GNCDisplayViewButton * buttons;
+    const gchar          * pref_group;
     gpointer               user_data;
     GList                * books;
     gint                   component_id;
@@ -120,10 +121,21 @@ gnc_dialog_query_view_double_click_entry (GNCQueryView *qview, gpointer item,
     gnc_dialog_query_run_callback (dqv->buttons, item, dqv);
 }
 
+static void
+dqv_save_window_size (DialogQueryView *dqv)
+{
+    g_return_if_fail (dqv);
+
+    if (dqv->pref_group)
+        gnc_save_window_size (dqv->pref_group, GTK_WINDOW(dqv->dialog));
+}
+
 static int
 gnc_dialog_query_view_delete_cb (GtkDialog *dialog, GdkEvent  *event, DialogQueryView *dqv)
 {
     g_return_val_if_fail (dqv, TRUE);
+
+    dqv_save_window_size (dqv);
 
     gnc_unregister_gui_component (dqv->component_id);
 
@@ -169,15 +181,29 @@ gnc_dialog_query_view_refresh_handler (GHashTable *changes, gpointer user_data)
 static void
 gnc_dialog_query_view_close (GtkButton *button, DialogQueryView *dqv)
 {
+    dqv_save_window_size (dqv);
+
     /* Don't select anything */
     gnc_dialog_query_view_destroy (dqv);
+}
+
+static gboolean
+dqv_window_key_press_cb (GtkWidget *widget, GdkEventKey *event,
+                         gpointer user_data)
+{
+    DialogQueryView *dqv = user_data;
+
+    if (event->keyval == GDK_KEY_Escape)
+        dqv_save_window_size (dqv);
+
+    return FALSE;
 }
 
 /*****************************************************************/
 /* PUBLIC INTERFACES */
 
 DialogQueryView *
-gnc_dialog_query_view_new (GtkWindow *parent, GList *param_list, Query *q)
+gnc_dialog_query_view_new (GtkWindow *parent, GList *param_list, Query *q, const gchar *pref_group)
 {
     GtkBuilder  *builder;
     DialogQueryView *dqv;
@@ -187,6 +213,7 @@ gnc_dialog_query_view_new (GtkWindow *parent, GList *param_list, Query *q)
     dqv = g_new0 (DialogQueryView, 1);
     builder = gtk_builder_new();
     gnc_builder_add_from_file (builder, "dialog-query-view.glade", "query_view_dialog");
+    dqv->pref_group = pref_group;
 
     /* Grab the dialog, save the dialog info */
     dqv->dialog = GTK_WIDGET(gtk_builder_get_object (builder, "query_view_dialog"));
@@ -247,6 +274,13 @@ gnc_dialog_query_view_new (GtkWindow *parent, GList *param_list, Query *q)
     for (node = dqv->books; node; node = node->next)
         gnc_gui_component_watch_entity (dqv->component_id, (GncGUID*)node->data,
                                         QOF_EVENT_DESTROY);
+
+    g_signal_connect (G_OBJECT (dqv->dialog), "key_press_event",
+                      G_CALLBACK (dqv_window_key_press_cb), dqv);
+
+    if (pref_group)
+        gnc_restore_window_size (pref_group, GTK_WINDOW(dqv->dialog), GTK_WINDOW(parent));
+
 
     g_object_unref(G_OBJECT(builder));
 
@@ -318,14 +352,15 @@ gnc_dialog_query_view_create (GtkWindow *parent, GList *param_list, Query *q,
                               const char *title, const char *label,
                               gboolean abs, gboolean inv_sort,
                               gint sort_column, GtkSortType order,
-                              GNCDisplayViewButton *buttons, gpointer user_data)
+                              GNCDisplayViewButton *buttons,
+                              const gchar *pref_group, gpointer user_data)
 {
     DialogQueryView *dqv;
 
     if (!param_list || !q)
         return NULL;
 
-    dqv = gnc_dialog_query_view_new (parent, param_list, q);
+    dqv = gnc_dialog_query_view_new (parent, param_list, q, pref_group);
     if (!dqv)
         return NULL;
 

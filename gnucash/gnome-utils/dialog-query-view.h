@@ -39,7 +39,7 @@ typedef struct
 } GNCDisplayViewButton;
 
 DialogQueryView *
-gnc_dialog_query_view_new (GtkWindow *parent, GList *param_list, Query *q);
+gnc_dialog_query_view_new (GtkWindow *parent, GList *param_list, Query *q, const gchar *pref_group);
 
 void gnc_dialog_query_view_set_title (DialogQueryView *dqv, const char *title);
 void gnc_dialog_query_view_set_label (DialogQueryView *dqv, const char *label);
@@ -57,7 +57,8 @@ gnc_dialog_query_view_create (GtkWindow *parent, GList *param_list, Query *q,
                               const char *title, const char *label,
                               gboolean abs, gboolean inv_sort,
                               gint sort_column, GtkSortType order,
-                              GNCDisplayViewButton *buttons, gpointer user_data);
+                              GNCDisplayViewButton *buttons,
+                              const gchar *pref_group, gpointer user_data);
 
 
 #endif /* GNC_DIALOG_QUERY_VIEW_H */

@@ -84,6 +84,9 @@
 #define DIALOG_NEW_INVOICE_CM_CLASS "dialog-new-invoice"
 #define DIALOG_VIEW_INVOICE_CM_CLASS "dialog-view-invoice"
 
+#define GNC_PREFS_GROUP_CUSTOMER  "dialogs.customer-due"
+#define GNC_PREFS_GROUP_VENDOR    "dialogs.vendor-due"
+
 #define GNC_PREFS_GROUP_SEARCH   "dialogs.business.invoice-search"
 #define GNC_PREF_NOTIFY_WHEN_DUE "notify-when-due"
 #define GNC_PREF_ACCUM_SPLITS    "accumulate-splits"
@@ -3782,6 +3785,7 @@ gnc_invoice_show_docs_due (GtkWindow *parent, QofBook *book, double days_in_adva
     time64 end_date;
     GList *res;
     gchar *message, *title;
+    gchar *prefs_group;
     DialogQueryView *dialog;
     gint len;
     static GList *param_list = NULL;
@@ -3891,6 +3895,7 @@ gnc_invoice_show_docs_due (GtkWindow *parent, QofBook *book, double days_in_adva
 
     if (duetype == DUE_FOR_VENDOR)
     {
+        prefs_group = GNC_PREFS_GROUP_VENDOR;
         message = g_strdup_printf
                   (/* Translators: %d is the number of bills/credit notes due. This is a
                          ngettext(3) message. */
@@ -3902,6 +3907,7 @@ gnc_invoice_show_docs_due (GtkWindow *parent, QofBook *book, double days_in_adva
     }
     else
     {
+        prefs_group = GNC_PREFS_GROUP_CUSTOMER;
         message = g_strdup_printf
                   (/* Translators: %d is the number of invoices/credit notes due. This is a
                          ngettext(3) message. */
@@ -3919,7 +3925,8 @@ gnc_invoice_show_docs_due (GtkWindow *parent, QofBook *book, double days_in_adva
                                           1, GTK_SORT_ASCENDING,
                                           duetype == DUE_FOR_VENDOR ?
                                                   vendorbuttons :
-                                                  customerbuttons, NULL);
+                                                  customerbuttons, 
+                                           prefs_group, NULL);
 
     g_free(message);
     qof_query_destroy(q);
