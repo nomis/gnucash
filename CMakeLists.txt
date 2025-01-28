@@ -958,12 +958,12 @@ add_custom_target(distcheck DEPENDS dist
 
 # uninstall target
 configure_file(
-        "${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.cmake.in"
-        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake"
+        "${CMAKE_SOURCE_DIR}/cmake/cmake_uninstall.sh.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.sh"
         @ONLY)
 
 add_custom_target(uninstall
-        COMMAND ${CMAKE_COMMAND} -P ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.cmake)
+        COMMAND /bin/sh ${CMAKE_CURRENT_BINARY_DIR}/cmake_uninstall.sh)
 
 set(_MODULES gnc-core-utils gnc-engine gnc-app-utils gnc-module gnc-locale-tax gnc-backend-xml-utils gnucash-guile)
 

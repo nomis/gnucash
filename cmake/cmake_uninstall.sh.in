@@ -1,0 +1,13 @@
+#!/bin/sh
+if [ ! -s install_manifest.txt ]; then
+    echo "Error: No install manifest."
+fi
+while IFS= read -r filename; do
+    if [ -e $filename ]; then
+        echo "--Uninstalling $filename"
+        rm $filename
+    else
+        echo "--$filename not found"
+    fi
+done<install_manifest.txt
+
