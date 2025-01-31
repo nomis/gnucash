@@ -4941,6 +4941,7 @@ gnc_plugin_page_register_cmd_jump (GSimpleAction *simple,
     Account* account;
     Account* leader;
     Split* split;
+    gboolean multiple_splits = FALSE;
 
     ENTER ("(action %p, page %p)", simple, page);
 
@@ -4999,6 +5000,7 @@ gnc_plugin_page_register_cmd_jump (GSimpleAction *simple,
         Split* other_split = xaccSplitGetOtherSplit (split);
         if (other_split == NULL)
         {
+            multiple_splits = TRUE;
             other_split = jump_multiple_splits (account, split);
         }
         if (other_split == NULL)
@@ -5061,11 +5063,30 @@ gnc_plugin_page_register_cmd_jump (GSimpleAction *simple,
     gnc_main_window_open_page (GNC_MAIN_WINDOW (window), new_page);
     gsr = gnc_plugin_page_register_get_gsr (new_page);
 
+    SplitRegister *new_page_reg = gnc_ledger_display_get_split_register (gsr->ledger);
+    gboolean jump_twice = FALSE;
+
+    /* Selecting the split (instead of just the transaction to open the "other"
+     * account) requires jumping a second time after expanding the transaction,
+     * in the basic and auto ledger modes.
+     */
+    if (new_page_reg->style != REG_STYLE_JOURNAL)
+        jump_twice = TRUE;
+
     /* Test for visibility of split */
     if (gnc_split_reg_clear_filter_for_split (gsr, split))
         gnc_plugin_page_register_clear_current_filter (GNC_PLUGIN_PAGE(new_page));
 
     gnc_split_reg_jump_to_split (gsr, split);
+
+    if (multiple_splits && jump_twice)
+    {
+        /* Expand the transaction for the basic and auto ledger to identify the
+         * split in this register, but only if there are more than two splits.
+         */
+        gnc_split_register_expand_current_trans (new_page_reg, TRUE);
+        gnc_split_reg_jump_to_split (gsr, split);
+    }
     LEAVE (" ");
 }
 
